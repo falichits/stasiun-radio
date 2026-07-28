@@ -1,0 +1,2615 @@
+﻿<!DOCTYPE html>
+<html lang="id" class="dark h-full bg-slate-950 text-slate-100">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Informasi Penyiaran JCCFM 101.5 MHz</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            850: '#131e32',
+                            900: '#0f172a',
+                            950: '#080d1a',
+                        },
+                        indigo: {
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for summary analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 9999px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        @keyframes pulse-subtle {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.6;
+            }
+        }
+
+        .animate-pulse-subtle {
+            animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+
+            #printableArea,
+            #printableArea * {
+                visibility: visible;
+            }
+
+            #printableArea {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                color: #000 !important;
+                background: #fff !important;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body class="h-full bg-slate-950 text-slate-100 flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+
+    <div id="app" class="min-h-screen flex flex-col">
+        <!-- APP HEADER / TICKER BAR -->
+        <header id="tickerBar"
+            class="hidden bg-indigo-950/80 border-b border-indigo-500/20 py-2 px-4 text-xs font-medium text-indigo-200 flex items-center justify-between z-20">
+            <div class="flex items-center gap-3 overflow-hidden">
+                <span
+                    class="bg-indigo-600 text-white font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider text-[10px] flex items-center gap-1.5 shrink-0">
+                    <i class="fa-solid fa-bullhorn text-[11px] animate-bounce"></i> Ticker News
+                </span>
+                <div class="overflow-hidden whitespace-nowrap w-full">
+                    <p id="tickerContent" class="inline-block animate-marquee pl-4">
+                        Selamat Datang di Portal Absensi & Manajemen JCCFM 101.5 MHz - Jadwal On-Air Minggu Ini Telah
+                        Diperbarui!
+                    </p>
+                </div>
+            </div>
+            <div class="shrink-0 pl-4 text-slate-400 flex items-center gap-2">
+                <span id="liveClock" class="font-mono text-indigo-300 font-semibold">00:00:00 WIB</span>
+            </div>
+        </header>
+
+        <!-- MAIN LAYOUT WRAPPER -->
+        <div class="flex-1 flex overflow-hidden relative">
+
+            <!-- SIDEBAR NAVIGATION -->
+            <aside id="sidebar"
+                class="hidden w-64 bg-slate-900 border-r border-slate-800 flex-col justify-between z-30 transition-all duration-300">
+                <div>
+                    <!-- BRANDING HEADER -->
+                    <div class="p-5 border-b border-slate-800/80 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+                                <i class="fa-solid fa-radio text-lg"></i>
+                            </div>
+                            <div>
+                                <h1 class="font-bold text-white text-base tracking-wide leading-none">JCCFM 101.5</h1>
+                                <p class="text-[11px] text-slate-400 mt-1 font-medium">Broadcaster System</p>
+                            </div>
+                        </div>
+                        <button onclick="toggleSidebarMobile()" class="md:hidden text-slate-400 hover:text-white">
+                            <i class="fa-solid fa-xmark text-lg"></i>
+                        </button>
+                    </div>
+
+                    <!-- USER INFO BANNER -->
+                    <div class="m-3 p-3 rounded-xl bg-slate-800/60 border border-slate-700/50 flex items-center gap-3">
+                        <img id="sidebarUserPhoto"
+                            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"
+                            class="w-9 h-9 rounded-full object-cover border border-indigo-500/40" alt="Avatar">
+                        <div class="overflow-hidden">
+                            <h4 id="sidebarUserName" class="text-xs font-semibold text-white truncate">Andi Pratama</h4>
+                            <span id="sidebarUserRole"
+                                class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-medium inline-block mt-0.5">Penyiar</span>
+                        </div>
+                    </div>
+
+                    <!-- NAV MENU ITEMS -->
+                    <nav id="navMenuList" class="p-3 space-y-1 text-sm font-medium">
+                        <!-- Dynamic nav inserted by JS -->
+                    </nav>
+                </div>
+
+                <!-- FOOTER ACTIONS -->
+                <div class="p-3 border-t border-slate-800/80">
+                    <button onclick="logout()"
+                        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-colors">
+                        <i class="fa-solid fa-right-from-bracket text-base"></i>
+                        <span>Keluar Sistem</span>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- CONTENT MAIN VIEWPORT -->
+            <main class="flex-1 overflow-y-auto bg-slate-950 flex flex-col relative" id="mainContainer">
+
+                <!-- TOP MOBILE & PROFILE BAR -->
+                <nav id="topNavBar"
+                    class="hidden bg-slate-900/80 backdrop-blur border-b border-slate-800 px-4 py-3 sticky top-0 z-20 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <button onclick="toggleSidebarMobile()"
+                            class="md:hidden text-slate-300 hover:text-white p-2 rounded-lg bg-slate-800">
+                            <i class="fa-solid fa-bars text-lg"></i>
+                        </button>
+                        <h2 id="pageTitle" class="text-lg font-bold text-white tracking-tight">Dashboard</h2>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <!-- NOTIFICATION BELL ICON & DROPDOWN -->
+                        <div class="relative">
+                            <button onclick="toggleNotificationDropdown()"
+                                class="relative p-2 text-slate-300 hover:text-white rounded-xl bg-slate-800/80 hover:bg-slate-800 transition-colors">
+                                <i class="fa-solid fa-bell text-sm"></i>
+                                <span id="notificationBadge"
+                                    class="absolute -top-1 -right-1 w-5 h-5 bg-rose-600 text-white font-bold rounded-full text-[10px] flex items-center justify-center shadow-lg">0</span>
+                            </button>
+                            <!-- Dropdown List -->
+                            <div id="notificationDropdown"
+                                class="hidden absolute right-0 mt-2 w-80 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-50 overflow-hidden">
+                                <div
+                                    class="p-3 border-b border-slate-800 flex justify-between items-center text-xs font-bold text-white bg-slate-950/50">
+                                    <span>Pusat Notifikasi & Tenggat Waktu</span>
+                                    <button onclick="markAllNotificationsRead()"
+                                        class="text-indigo-400 hover:underline text-[10px]">Tandai Dibaca</button>
+                                </div>
+                                <div id="notificationListContainer"
+                                    class="max-h-72 overflow-y-auto divide-y divide-slate-800/60 text-xs">
+                                    <!-- Injected by JS -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-right hidden sm:block">
+                            <div id="topUserGreeting" class="text-xs font-semibold text-white">Halo, Andi</div>
+                            <div id="topUserRoleBadge" class="text-[10px] text-slate-400">Penyiar Utama</div>
+                        </div>
+                        <img id="topUserAvatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"
+                            class="w-8 h-8 rounded-full object-cover border border-indigo-500/40" alt="Profile">
+                    </div>
+                </nav>
+
+                <!-- DYNAMIC VIEW RENDER AREA -->
+                <div id="viewContainer" class="p-4 md:p-6 flex-1 max-w-7xl w-full mx-auto">
+                    <!-- Views injected here -->
+                </div>
+
+                <!-- FOOTER -->
+                <footer id="appFooter"
+                    class="hidden border-t border-slate-900 py-4 px-6 text-center text-xs text-slate-500">
+                    &copy; 2026 JCCFM 101.5 MHz Station Operations. All Rights Reserved. Sistem Informasi Penyiaran.
+                </footer>
+            </main>
+        </div>
+    </div>
+
+    <!-- A4 PRINTABLE OVERLAY / PREVIEW MODAL -->
+    <div id="printModal"
+        class="fixed inset-0 bg-slate-950/80 backdrop-blur-md hidden items-center justify-center z-50 p-4 overflow-y-auto">
+        <div class="bg-white text-slate-900 rounded-2xl max-w-3xl w-full p-8 shadow-2xl relative my-8">
+            <!-- Modal Header Toolbar -->
+            <div class="no-print flex items-center justify-between border-b pb-4 mb-6 border-slate-200">
+                <div class="flex items-center gap-2 text-indigo-700 font-bold">
+                    <i class="fa-solid fa-file-pdf text-xl"></i>
+                    <span>Preview Dokumen Cetak / Export PDF (A4)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="window.print()"
+                        class="bg-indigo-600 text-white hover:bg-indigo-700 px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shadow-md">
+                        <i class="fa-solid fa-print"></i> Cetak / Save PDF
+                    </button>
+                    <button onclick="closePrintModal()"
+                        class="bg-slate-200 text-slate-700 hover:bg-slate-300 px-3 py-2 rounded-xl text-xs font-semibold">
+                        Tutup
+                    </button>
+                </div>
+            </div>
+
+            <!-- PRINT CONTENT CONTAINER (KOP SURAT DYNAMICALLY APPLIED) -->
+            <div id="printableArea" class="bg-white text-slate-900 p-2 font-serif text-sm leading-relaxed">
+                <!-- KOP SURAT HEADER -->
+                <div class="text-center border-b-2 border-slate-900 pb-3 mb-6">
+                    <h2 id="kopStationName" class="text-xl font-bold uppercase tracking-wider text-slate-900">STASIUN
+                        RADIO JCCFM 101.5 MHz</h2>
+                    <p id="kopStationAddress" class="text-xs text-slate-600 font-sans mt-1">
+                        Jl. Radio Penyiaran No. 101, Kota JCC | Telp: (021) 555-1015 | Email: management@jccfm.com
+                    </p>
+                </div>
+
+                <!-- DYNAMIC REPORT BODY -->
+                <div id="printableContent" class="font-sans text-slate-800">
+                    <!-- Injected dynamically -->
+                </div>
+
+                <!-- KOP SURAT FOOTER / SIGNATURE -->
+                <div class="mt-12 pt-6 flex justify-between items-end font-sans text-xs">
+                    <div>
+                        <p class="text-slate-500">Dokumen ini diterbitkan secara elektronik oleh Portal Resmi JCCFM.</p>
+                        <p class="text-[10px] text-slate-400 mt-1">Verified Security Token: JCC-PDF-AUTH-2026</p>
+                    </div>
+                    <div class="text-center min-w-[200px]">
+                        <p id="kopCityDate" class="text-slate-600 mb-1">Kota JCC, <span id="signatureCurrentDate">27
+                                Juli 2026</span></p>
+                        <p id="kopTitle" class="font-bold text-slate-900">Mengetahui, Station Manager</p>
+                        <div class="h-16 flex items-center justify-center my-1 italic text-slate-400 font-serif">
+                            ( Tanda Tangan & Stempel Resmi )
+                        </div>
+                        <p id="kopSignee" class="font-bold text-slate-900 underline">Budi Santoso, M.Si</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GENERAL APPLICATION MODAL -->
+    <div id="appModal"
+        class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+            <button onclick="closeAppModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h3 id="appModalTitle" class="text-lg font-bold text-white mb-4 flex items-center gap-2">Modal Title</h3>
+            <div id="appModalBody" class="space-y-4">
+                <!-- Content injected here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ==========================================================================
+           STATE & INITIAL DATA SETUP
+           ========================================================================== */
+
+        // Initial Admin Kop Surat & Dokumentasi Template Config
+        let kopSuratConfig = {
+            stationName: "STASIUN RADIO JCCFM 101.5 MHz",
+            address: "Jl. Pemuda No. 88, Komplek Penyiaran Nusantara, Kota JCC | Hotline: (021) 889-1015 | Web: www.jccfm.com",
+            city: "Kota JCC",
+            signeeTitle: "Station Manager & Penanggung Jawab",
+            signeeName: "H. Irwan Setiawan, M.I.Kom",
+            docTemplateHeader: "SURAT KETERANGAN RESMI & REKAPITULASI PENYIARAN"
+        };
+
+        // Dummy Master Data Penyiar
+        let penyiars = [];
+
+        // Categories list
+        let broadcasterCategories = ["Penyiar Utama", "Co-Host & News", "Evening Prime Penyiar", "Freelance Announcer", "Music Director & Broadcaster"];
+
+        // Programs list
+        let radioPrograms = [
+            { id: "PROG-1", name: "JCC Morning Drive & News", time: "06:00 - 08:00 WIB", category: "Prime Time News & Talk" },
+            { id: "PROG-2", name: "Santai Siang Hits Indonesia", time: "11:00 - 13:00 WIB", category: "Music & Infotainment" },
+            { id: "PROG-3", name: "JCC Sore Sunset Breeze", time: "16:00 - 18:00 WIB", category: "Drive Time Music" },
+            { id: "PROG-4", name: "Night Vibe & Intimate Stories", time: "20:00 - 22:00 WIB", category: "Night Talk & Slow Hits" }
+        ];
+
+        // Attendance Logs
+        let attendanceLogs = [];
+
+        // Current Active CheckIn state
+        let currentActiveAttendance = null;
+        let checkoutTimerInterval = null;
+
+        // Agendas / Disposisi with Deadline
+        let agendas = [];
+
+        // Achievement Events with Deadline
+        let achievements = [];
+
+        // Ticker News List
+        let tickerNewsList = ["Selamat Datang di Sistem Informasi Penyiaran JCCFM 101.5 MHz","Silakan login untuk mengakses portal"];
+
+        // Leave Requests (Cuti/Ijin) with Deadline
+        let leaveRequests = [];
+
+        // Notifications System State
+        let notifications = [];
+
+        // Audience / Listeners Database
+        let listenersData = [];
+
+        // Current Auth User state
+        let currentUser = null;
+
+        /* ==========================================================================
+           AUTHENTICATION & NAVIGATION LOGIC
+           ========================================================================== */
+
+        window.onload = function () {
+            startClock();
+            renderLoginView();
+        };
+
+        function startClock() {
+            setInterval(() => {
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('id-ID') + ' WIB';
+                const dateStr = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+                const liveClockEl = document.getElementById('liveClock');
+                if (liveClockEl) liveClockEl.innerText = `${dateStr} | ${timeStr}`;
+            }, 1000);
+        }
+
+        function renderLoginView() {
+            document.getElementById('tickerBar').classList.add('hidden');
+            document.getElementById('sidebar').classList.add('hidden');
+            document.getElementById('topNavBar').classList.add('hidden');
+            document.getElementById('appFooter').classList.add('hidden');
+
+            const container = document.getElementById('viewContainer');
+            container.innerHTML = `
+                <div class="min-h-[85vh] flex items-center justify-center py-10 px-4">
+                    <div class="max-w-md w-full glass-card p-8 rounded-3xl border border-slate-800 shadow-2xl relative overflow-hidden">
+                        <div class="absolute -top-20 -right-20 w-40 h-40 bg-indigo-600/30 rounded-full blur-3xl pointer-events-none"></div>
+                        <div class="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-600/30 rounded-full blur-3xl pointer-events-none"></div>
+
+                        <div class="text-center mb-8 relative z-10">
+                            <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 mx-auto flex items-center justify-center text-white text-2xl shadow-xl shadow-indigo-500/30 mb-4">
+                                <i class="fa-solid fa-radio"></i>
+                            </div>
+                            <h2 class="text-2xl font-extrabold text-white tracking-tight">Portal Absensi JCCFM</h2>
+                            <p class="text-xs text-slate-400 mt-1">Sistem Informasi Penyiaran & Absensi 101.5 MHz</p>
+                        </div>
+
+                        <div class="mb-6 p-3 rounded-2xl bg-slate-900/80 border border-slate-800 flex justify-between items-center text-xs">
+                            <span class="text-slate-400 font-medium">Quick Demo Login:</span>
+                            <div class="flex gap-1">
+                                <button onclick="quickFill('penyiar')" class="px-2.5 py-1 rounded-lg bg-indigo-600/20 text-indigo-300 hover:bg-indigo-600/40 font-semibold transition-all">Penyiar</button>
+                                <button onclick="quickFill('admin')" class="px-2.5 py-1 rounded-lg bg-purple-600/20 text-purple-300 hover:bg-purple-600/40 font-semibold transition-all">Admin</button>
+                            </div>
+                        </div>
+
+                        <form onsubmit="handleLogin(event)" class="space-y-4 relative z-10">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 mb-1.5">Email Akses</label>
+                                <div class="relative">
+                                    <i class="fa-solid fa-envelope absolute left-3.5 top-3 text-slate-500 text-sm"></i>
+                                    <input type="email" id="loginEmail" required class="w-full bg-slate-900 border border-slate-700/80 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-600" placeholder="nama@jccfm.com">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 mb-1.5">Password</label>
+                                <div class="relative">
+                                    <i class="fa-solid fa-lock absolute left-3.5 top-3 text-slate-500 text-sm"></i>
+                                    <input type="password" id="loginPassword" required class="w-full bg-slate-900 border border-slate-700/80 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-600" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢">
+                                </div>
+                            </div>
+
+                            <button type="submit" class="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 mt-2">
+                                <span>Masuk ke Sistem</span>
+                                <i class="fa-solid fa-arrow-right text-xs"></i>
+                            </button>
+                        </form>
+
+                        <div class="mt-6 text-center text-[11px] text-slate-500 border-t border-slate-800/80 pt-4">
+                            Hanya email & password terdaftar oleh Admin yang memiliki akses.
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function quickFill(role) {
+            if (role === 'penyiar') {
+                document.getElementById('loginEmail').value = 'andi@jccfm.com';
+                document.getElementById('loginPassword').value = '123';
+            } else {
+                document.getElementById('loginEmail').value = 'admin@jccfm.com';
+                document.getElementById('loginPassword').value = 'admin123';
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const pass = document.getElementById('loginPassword').value;
+
+            if (email === 'admin@jccfm.com' && pass === 'admin123') {
+                currentUser = {
+                    role: 'admin',
+                    data: {
+                        name: "Budi Santoso (Admin)",
+                        email: "admin@jccfm.com",
+                        photo: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150"
+                    }
+                };
+                setupDashboardApp();
+                switchView('adminDashboard');
+                showNotification('Berhasil masuk sebagai Admin System');
+                return;
+            }
+
+            const foundPenyiar = penyiars.find(p => p.email.toLowerCase() === email.toLowerCase() && p.password === pass);
+            if (foundPenyiar) {
+                currentUser = {
+                    role: 'penyiar',
+                    data: foundPenyiar
+                };
+                setupDashboardApp();
+                switchView('penyiarDashboard');
+                showNotification(`Selamat datang kembali, ${foundPenyiar.name}`);
+                return;
+            }
+
+            showNotification('Email atau Password tidak valid!', 'error');
+        }
+
+        function setupDashboardApp() {
+            document.getElementById('tickerBar').classList.remove('hidden');
+            document.getElementById('sidebar').classList.remove('hidden');
+            document.getElementById('sidebar').classList.add('flex');
+            document.getElementById('topNavBar').classList.remove('hidden');
+            document.getElementById('appFooter').classList.remove('hidden');
+
+            const tickerEl = document.getElementById('tickerContent');
+            tickerEl.innerText = tickerNewsList.join(" â€¢ ");
+
+            document.getElementById('sidebarUserName').innerText = currentUser.data.name;
+            document.getElementById('sidebarUserRole').innerText = currentUser.role === 'admin' ? 'Administrator' : currentUser.data.category;
+            document.getElementById('sidebarUserPhoto').src = currentUser.data.photo;
+
+            document.getElementById('topUserGreeting').innerText = `Halo, ${currentUser.data.name.split(' ')[0]}`;
+            document.getElementById('topUserRoleBadge').innerText = currentUser.role === 'admin' ? 'System Admin' : currentUser.data.category;
+            document.getElementById('topUserAvatar').src = currentUser.data.photo;
+
+            renderNavigationMenu();
+            updateNotificationBadge();
+        }
+
+        function renderNavigationMenu() {
+            const nav = document.getElementById('navMenuList');
+            let menuHtml = '';
+
+            if (currentUser.role === 'penyiar') {
+                menuHtml = `
+                    <button onclick="switchView('penyiarDashboard')" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-view="penyiarDashboard">
+                        <i class="fa-solid fa-clock flex-shrink-0 text-indigo-400"></i>
+                        <span>Absen & Summary</span>
+                    </button>
+                    <button onclick="switchView('penyiarProfile')" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-view="penyiarProfile">
+                        <i class="fa-solid fa-id-card flex-shrink-0 text-indigo-400"></i>
+                        <span>Profil Biodata</span>
+                    </button>
+                    <button onclick="switchView('agendaView')" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-view="agendaView">
+                        <i class="fa-solid fa-list-check flex-shrink-0 text-indigo-400"></i>
+                        <span>Agenda / Disposisi</span>
+                    </button>
+                    <button onclick="switchView('rangkumanAbsensi')" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-view="rangkumanAbsensi">
+                        <i class="fa-solid fa-chart-line flex-shrink-0 text-indigo-400"></i>
+                        <span>Rangkuman Absensi</span>
+                    </button>
+                    <button onclick="switchView('achievementView')" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-view="achievementView">
+                        <i class="fa-solid fa-trophy flex-shrink-0 text-indigo-400"></i>
+                        <span>Achievement / Event</span>
+                    </button>
+                    <button onclick="switchView('programList')" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-view="programList">
+                        <i class="fa-solid fa-calendar-days flex-shrink-0 text-indigo-400"></i>
+                        <span>Daftar Program</span>
+                    </button>
+                    <button onclick="switchView('cutiView')" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-view="cutiView">
+                        <i class="fa-solid fa-envelope-open-text flex-shrink-0 text-indigo-400"></i>
+                        <span>Pengajuan Cuti / Ijin</span>
+                    </button>
+                    <button onclick="switchView('customerView')" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-view="customerView">
+                        <i class="fa-solid fa-users flex-shrink-0 text-indigo-400"></i>
+                        <span>Database Pendengar</span>
+                    </button>
+                `;
+            } else {
+                menuHtml = `
+                    <button onclick="switchView('adminDashboard')" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-view="adminDashboard">
+                        <i class="fa-solid fa-gauge flex-shrink-0 text-purple-400"></i>
+                        <span>Dashboard Admin</span>
+                    </button>
+                    <button onclick="switchView('adminPenyiarMaster')" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-view="adminPenyiarMaster">
+                        <i class="fa-solid fa-users-gear flex-shrink-0 text-purple-400"></i>
+                        <span>Data & Kategori Penyiar</span>
+                    </button>
+                    <button onclick="switchView('agendaView')" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-view="agendaView">
+                        <i class="fa-solid fa-paper-plane flex-shrink-0 text-purple-400"></i>
+                        <span>Kelola Agenda</span>
+                    </button>
+                    <button onclick="switchView('rangkumanAbsensi')" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-view="rangkumanAbsensi">
+                        <i class="fa-solid fa-file-invoice flex-shrink-0 text-purple-400"></i>
+                        <span>Rekapan Siaran Penyiar</span>
+                    </button>
+                    <button onclick="switchView('achievementView')" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-view="achievementView">
+                        <i class="fa-solid fa-award flex-shrink-0 text-purple-400"></i>
+                        <span>Kelola Event / Task</span>
+                    </button>
+                    <button onclick="switchView('programList')" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-view="programList">
+                        <i class="fa-solid fa-sliders flex-shrink-0 text-purple-400"></i>
+                        <span>Master Program Radio</span>
+                    </button>
+                    <button onclick="switchView('cutiView')" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-view="cutiView">
+                        <i class="fa-solid fa-file-circle-check flex-shrink-0 text-purple-400"></i>
+                        <span>Persetujuan Cuti</span>
+                    </button>
+                    <button onclick="switchView('customerView')" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-view="customerView">
+                        <i class="fa-solid fa-address-book flex-shrink-0 text-purple-400"></i>
+                        <span>Database Pendengar</span>
+                    </button>
+                    <button onclick="switchView('adminSettings')" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-300 hover:bg-slate-800 hover:text-white transition-colors" data-view="adminSettings">
+                        <i class="fa-solid fa-heading flex-shrink-0 text-purple-400"></i>
+                        <span>Kop & Template Surat</span>
+                    </button>
+                `;
+            }
+
+            nav.innerHTML = menuHtml;
+        }
+
+        function switchView(viewName) {
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                if (btn.dataset.view === viewName) {
+                    btn.classList.add('bg-indigo-600', 'text-white', 'shadow-md', 'shadow-indigo-600/30');
+                    btn.classList.remove('text-slate-300');
+                } else {
+                    btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-md', 'shadow-indigo-600/30');
+                    btn.classList.add('text-slate-300');
+                }
+            });
+
+            const pageTitles = {
+                penyiarDashboard: 'Absensi & Summary Penyiar',
+                penyiarProfile: 'Profil & Biodata Penyiar',
+                adminDashboard: 'Dashboard Overview Admin',
+                adminPenyiarMaster: 'Kelola Penyiar & Kategori',
+                agendaView: 'Agenda & Disposisi Surat',
+                rangkumanAbsensi: 'Rekapan & Laporan Siaran Penyiar',
+                achievementView: 'Achievement & Event Tantangan',
+                programList: 'Daftar Program Radio',
+                cutiView: 'Pengajuan & Persetujuan Cuti',
+                customerView: 'Database Pendengar Radio',
+                adminSettings: 'Pengaturan Kop Surat & Template'
+            };
+
+            document.getElementById('pageTitle').innerText = pageTitles[viewName] || 'Dashboard';
+
+            const sidebar = document.getElementById('sidebar');
+            if (!sidebar.classList.contains('hidden') && window.innerWidth < 768) {
+                sidebar.classList.add('hidden');
+            }
+
+            if (viewName === 'penyiarDashboard') renderPenyiarDashboard();
+            else if (viewName === 'penyiarProfile') renderPenyiarProfile();
+            else if (viewName === 'adminDashboard') renderAdminDashboard();
+            else if (viewName === 'adminPenyiarMaster') renderAdminPenyiarMaster();
+            else if (viewName === 'agendaView') renderAgendaView();
+            else if (viewName === 'rangkumanAbsensi') renderRangkumanAbsensiView();
+            else if (viewName === 'achievementView') renderAchievementView();
+            else if (viewName === 'programList') renderProgramListView();
+            else if (viewName === 'cutiView') renderCutiView();
+            else if (viewName === 'customerView') renderCustomerView();
+            else if (viewName === 'adminSettings') renderAdminSettingsView();
+        }
+
+        function toggleSidebarMobile() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('hidden');
+            sidebar.classList.toggle('fixed');
+            sidebar.classList.toggle('inset-y-0');
+            sidebar.classList.toggle('left-0');
+        }
+
+        function logout() {
+            currentUser = null;
+            if (checkoutTimerInterval) clearInterval(checkoutTimerInterval);
+            renderLoginView();
+            showNotification('Anda telah keluar dari akun');
+        }
+
+        /* ==========================================================================
+           NOTIFICATIONS & DEADLINE REMINDER ENGINE
+           ========================================================================== */
+
+        function toggleNotificationDropdown() {
+            const dropdown = document.getElementById('notificationDropdown');
+            dropdown.classList.toggle('hidden');
+            renderNotificationItems();
+        }
+
+        function renderNotificationItems() {
+            const container = document.getElementById('notificationListContainer');
+            if (!container) return;
+
+            if (notifications.length === 0) {
+                container.innerHTML = `<div class="p-4 text-center text-slate-500 italic">Tidak ada notifikasi baru</div>`;
+                return;
+            }
+
+            container.innerHTML = notifications.map(n => `
+                <div class="p-3 hover:bg-slate-800/40 transition-colors flex items-start gap-3 ${n.read ? 'opacity-60' : 'bg-slate-950/20'}">
+                    <div class="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
+                        <i class="fa-solid fa-bell text-xs"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="font-bold text-white">${n.title}</div>
+                        <p class="text-slate-300 text-[11px] mt-0.5">${n.message}</p>
+                        <span class="text-[9px] text-slate-500 font-mono mt-1 block">${n.date}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateNotificationBadge() {
+            const badge = document.getElementById('notificationBadge');
+            const unreadCount = notifications.filter(n => !n.read).length;
+            if (badge) {
+                badge.innerText = unreadCount;
+                if (unreadCount === 0) badge.classList.add('hidden');
+                else badge.classList.remove('hidden');
+            }
+        }
+
+        function markAllNotificationsRead() {
+            notifications.forEach(n => n.read = true);
+            updateNotificationBadge();
+            renderNotificationItems();
+            showNotification('Semua notifikasi ditandai dibaca');
+        }
+
+        function addNotification(title, message, type = 'general') {
+            notifications.unshift({
+                id: "NOTIF-" + Date.now(),
+                title: title,
+                message: message,
+                date: new Date().toISOString().split('T')[0],
+                read: false,
+                type: type
+            });
+            updateNotificationBadge();
+        }
+
+        /* ==========================================================================
+           1. PENYIAR DASHBOARD & ABSENSI AUTOMATION
+           ========================================================================== */
+
+        function renderPenyiarDashboard() {
+            const container = document.getElementById('viewContainer');
+            const myLogs = attendanceLogs.filter(l => l.penyiarId === currentUser.data.id);
+            const totalOnAirHours = myLogs.length * 2;
+
+            container.innerHTML = `
+                <div class="space-y-6">
+                    <div class="glass-card rounded-3xl p-6 border border-slate-800 relative overflow-hidden">
+                        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                            <div>
+                                <span class="px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-semibold inline-block mb-2">
+                                    <i class="fa-solid fa-microphone text-indigo-400 mr-1.5"></i> Terminal Absensi Penyiar
+                                </span>
+                                <h3 class="text-xl font-bold text-white">Modul Check-In On-Air Studio</h3>
+                                <p class="text-xs text-slate-400 mt-1">Pilih program siaran terlebih dahulu. Check-In tercatat otomatis sesuai waktu device & Checkout otomatis 2 Jam.</p>
+                            </div>
+
+                            <div class="text-right bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800">
+                                <div id="liveDeviceTime" class="text-xl font-bold font-mono text-indigo-400">00:00:00 WIB</div>
+                                <div id="liveDeviceDate" class="text-[11px] text-slate-400 font-medium">Senin, 27 Juli 2026</div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 border-t border-slate-800/80 pt-6" id="attendanceControlPanel"></div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="glass-card p-5 rounded-2xl border border-slate-800">
+                            <div class="flex justify-between items-center text-slate-400 mb-2">
+                                <span class="text-xs font-medium">Total Sesi Siaran</span>
+                                <i class="fa-solid fa-headset text-indigo-400"></i>
+                            </div>
+                            <div class="text-2xl font-bold text-white">${myLogs.length} Sesi</div>
+                            <div class="text-[11px] text-emerald-400 mt-1"><i class="fa-solid fa-arrow-up mr-1"></i>Periode Juli 2026</div>
+                        </div>
+
+                        <div class="glass-card p-5 rounded-2xl border border-slate-800">
+                            <div class="flex justify-between items-center text-slate-400 mb-2">
+                                <span class="text-xs font-medium">Total Jam On-Air</span>
+                                <i class="fa-solid fa-clock text-purple-400"></i>
+                            </div>
+                            <div class="text-2xl font-bold text-white">${totalOnAirHours} Jam</div>
+                            <div class="text-[11px] text-slate-400 mt-1">Tercatat Akurat</div>
+                        </div>
+
+                        <div class="glass-card p-5 rounded-2xl border border-slate-800">
+                            <div class="flex justify-between items-center text-slate-400 mb-2">
+                                <span class="text-xs font-medium">Tingkat Kehadiran</span>
+                                <i class="fa-solid fa-circle-check text-emerald-400"></i>
+                            </div>
+                            <div class="text-2xl font-bold text-white">100%</div>
+                            <div class="text-[11px] text-emerald-400 mt-1">Sangat Baik</div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="glass-card p-5 rounded-2xl border border-slate-800">
+                            <h4 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                                <i class="fa-solid fa-chart-simple text-indigo-400"></i> Grafik Jam Siaran Minggu Ini
+                            </h4>
+                            <div class="h-56">
+                                <canvas id="penyiarChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="glass-card p-5 rounded-2xl border border-slate-800 flex flex-col justify-between">
+                            <div>
+                                <h4 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                                    <i class="fa-solid fa-history text-purple-400"></i> Riwayat Absensi Terakhir
+                                </h4>
+                                <div class="space-y-3 overflow-y-auto max-h-52 pr-1">
+                                    ${myLogs.map(log => `
+                                        <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800 flex justify-between items-center text-xs">
+                                            <div>
+                                                <div class="font-semibold text-white">${log.programName}</div>
+                                                <div class="text-slate-400 text-[11px] mt-0.5">${log.date} | ${log.checkIn} - ${log.checkOut}</div>
+                                            </div>
+                                            <span class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold text-[10px]">
+                                                ${log.status}
+                                            </span>
+                                        </div>
+                                    `).join('') || '<p class="text-xs text-slate-500 italic">Belum ada riwayat absensi.</p>'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            updateDeviceClock();
+            renderPenyiarAttendancePanel();
+            initPenyiarChart(myLogs);
+        }
+
+        function updateDeviceClock() {
+            const now = new Date();
+            const timeEl = document.getElementById('liveDeviceTime');
+            const dateEl = document.getElementById('liveDeviceDate');
+            if (timeEl) timeEl.innerText = now.toLocaleTimeString('id-ID') + ' WIB';
+            if (dateEl) dateEl.innerText = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        }
+
+        function renderPenyiarAttendancePanel() {
+            const panel = document.getElementById('attendanceControlPanel');
+            if (!panel) return;
+
+            if (currentActiveAttendance) {
+                panel.innerHTML = `
+                    <div class="bg-indigo-950/60 border border-indigo-500/30 rounded-2xl p-5 flex flex-col md:flex-row justify-between items-center gap-4">
+                        <div class="space-y-1">
+                            <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold inline-flex items-center gap-1.5 animate-pulse">
+                                <span class="w-2 h-2 rounded-full bg-emerald-400"></span> ON-AIR AKTIF
+                            </span>
+                            <h4 class="text-lg font-bold text-white">${currentActiveAttendance.programName}</h4>
+                            <p class="text-xs text-slate-300">Waktu Check-In: <span class="font-mono text-indigo-300 font-semibold">${currentActiveAttendance.checkIn} WIB</span></p>
+                        </div>
+
+                        <div class="text-center md:text-right flex flex-col items-center md:items-end gap-2">
+                            <div class="text-xs text-slate-400">Checkout Otomatis Dalam (2 Jam):</div>
+                            <div id="countdownTimer" class="text-2xl font-extrabold font-mono text-amber-400">01:59:59</div>
+                            <button onclick="manualCheckout()" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-lg shadow-rose-600/30 transition-all flex items-center gap-2">
+                                <i class="fa-solid fa-right-from-bracket"></i> Check-Out Manual
+                            </button>
+                        </div>
+                    </div>
+                `;
+                startCountdownTimer();
+            } else {
+                panel.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-300 mb-2">Pilih Program Siaran Hari Ini:</label>
+                            <select id="selectAttendanceProgram" class="w-full bg-slate-900 border border-slate-700 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-indigo-500">
+                                ${radioPrograms.map(p => `<option value="${p.name}">${p.name} (${p.time})</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <button onclick="performCheckIn()" class="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-fingerprint text-lg"></i>
+                                <span>Check-In Sekarang</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function performCheckIn() {
+            const progSelect = document.getElementById('selectAttendanceProgram');
+            const progName = progSelect.value;
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('id-ID');
+            const dateStr = now.toISOString().split('T')[0];
+
+            currentActiveAttendance = {
+                id: "ABS-" + Date.now(),
+                penyiarId: currentUser.data.id,
+                penyiarName: currentUser.data.name,
+                programName: progName,
+                date: dateStr,
+                checkIn: timeStr,
+                startTime: Date.now()
+            };
+
+            addNotification("Absensi Berhasil", `Anda telah Check-In pada program ${progName}`, "attendance");
+            showNotification(`Berhasil Check-In pada program ${progName}`);
+            renderPenyiarAttendancePanel();
+        }
+
+        function startCountdownTimer() {
+            if (checkoutTimerInterval) clearInterval(checkoutTimerInterval);
+
+            checkoutTimerInterval = setInterval(() => {
+                if (!currentActiveAttendance) return;
+
+                const elapsedSeconds = Math.floor((Date.now() - currentActiveAttendance.startTime) / 1000);
+                const totalSeconds = 2 * 60 * 60;
+                const remainingSeconds = totalSeconds - elapsedSeconds;
+
+                if (remainingSeconds <= 0) {
+                    clearInterval(checkoutTimerInterval);
+                    autoCheckout();
+                } else {
+                    const hours = Math.floor(remainingSeconds / 3600);
+                    const minutes = Math.floor((remainingSeconds % 3600) / 60);
+                    const seconds = remainingSeconds % 60;
+                    const timerEl = document.getElementById('countdownTimer');
+                    if (timerEl) {
+                        timerEl.innerText = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                    }
+                }
+            }, 1000);
+        }
+
+        function manualCheckout() {
+            finalizeCheckout("Check-Out Manual Selesai");
+        }
+
+        function autoCheckout() {
+            finalizeCheckout("Check-Out Otomatis (2 Jam)");
+        }
+
+        function finalizeCheckout(statusLabel) {
+            if (!currentActiveAttendance) return;
+
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('id-ID');
+
+            attendanceLogs.unshift({
+                id: currentActiveAttendance.id,
+                penyiarId: currentActiveAttendance.penyiarId,
+                penyiarName: currentActiveAttendance.penyiarName,
+                programName: currentActiveAttendance.programName,
+                date: currentActiveAttendance.date,
+                checkIn: currentActiveAttendance.checkIn,
+                checkOut: timeStr,
+                status: statusLabel
+            });
+
+            currentActiveAttendance = null;
+            if (checkoutTimerInterval) clearInterval(checkoutTimerInterval);
+
+            showNotification('Proses Check-Out berhasil dicatat!');
+            renderPenyiarDashboard();
+        }
+
+        function initPenyiarChart(myLogs) {
+            const ctx = document.getElementById('penyiarChart');
+            if (!ctx) return;
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'],
+                    datasets: [{
+                        label: 'Jam On-Air',
+                        data: [2, 4, 2, 2, 4, 2, 0],
+                        backgroundColor: 'rgba(99, 102, 241, 0.6)',
+                        borderColor: '#6366f1',
+                        borderWidth: 2,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                        x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        /* ==========================================================================
+           2. PROFIL BIODATA PENYIAR & ADMIN CV EXPORT
+           ========================================================================== */
+
+        function renderPenyiarProfile() {
+            const p = currentUser.data;
+            const container = document.getElementById('viewContainer');
+
+            container.innerHTML = `
+                <div class="max-w-4xl mx-auto space-y-6">
+                    <div class="glass-card rounded-3xl p-6 border border-slate-800">
+                        <div class="flex flex-col sm:flex-row items-center gap-6">
+                            <img src="${p.photo}" class="w-28 h-28 rounded-2xl object-cover border-2 border-indigo-500 shadow-xl" alt="Penyiar Photo">
+                            <div class="text-center sm:text-left space-y-1">
+                                <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                                    <h3 class="text-xl font-bold text-white">${p.name}</h3>
+                                    <span class="px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-semibold">${p.category}</span>
+                                </div>
+                                <p class="text-xs text-slate-400">ID Penyiar: <span class="font-mono text-indigo-400 font-semibold">${p.id}</span></p>
+                                <p class="text-xs text-slate-400">Email Akses: ${p.email}</p>
+                            </div>
+                            <div class="sm:ml-auto">
+                                <button onclick="openCVExportModal('${p.id}')" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/30 flex items-center gap-2">
+                                    <i class="fa-solid fa-file-pdf"></i> Preview CV / Surat Keterangan
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mt-8 border-t border-slate-800 pt-6">
+                            <h4 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                                <i class="fa-solid fa-key text-indigo-400"></i> Ganti Password Akses Anda
+                            </h4>
+                            <form onsubmit="handlePenyiarPasswordChange(event)" class="max-w-md space-y-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-300 mb-1">Password Baru</label>
+                                    <input type="password" id="newPenyiarPass" required class="w-full bg-slate-900 border border-slate-700 rounded-xl py-2.5 px-4 text-sm text-white focus:outline-none focus:border-indigo-500">
+                                </div>
+                                <button type="submit" class="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl shadow-lg transition-all">
+                                    Simpan Password Baru
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function handlePenyiarPasswordChange(e) {
+            e.preventDefault();
+            const newPass = document.getElementById('newPenyiarPass').value;
+            currentUser.data.password = newPass;
+            const found = penyiars.find(p => p.id === currentUser.data.id);
+            if (found) found.password = newPass;
+
+            showNotification('Password berhasil diperbarui!');
+            document.getElementById('newPenyiarPass').value = '';
+        }
+
+        function openCVExportModal(penyiarId) {
+            const targetPenyiar = penyiars.find(p => p.id === penyiarId) || currentUser.data;
+
+            const htmlContent = `
+                <div class="space-y-6">
+                    <div class="text-center border-b pb-4 border-slate-300">
+                        <h3 class="text-lg font-bold text-slate-900 uppercase tracking-wide">PROFIL & BIODATA PENYIAR</h3>
+                        <p class="text-xs text-slate-600 font-sans">No. Reg: JCC/CV-PEN/${targetPenyiar.id}/2026</p>
+                    </div>
+
+                    <div class="flex items-start gap-6 font-sans text-xs text-slate-800">
+                        <img src="${targetPenyiar.photo}" class="w-32 h-40 object-cover rounded border border-slate-400" alt="Foto">
+                        <div class="space-y-2 flex-1">
+                            <div class="grid grid-cols-3 border-b pb-1">
+                                <span class="font-bold text-slate-600">ID Penyiar</span>
+                                <span class="col-span-2 font-semibold text-slate-900">${targetPenyiar.id}</span>
+                            </div>
+                            <div class="grid grid-cols-3 border-b pb-1">
+                                <span class="font-bold text-slate-600">Nama Lengkap</span>
+                                <span class="col-span-2 font-semibold text-slate-900">${targetPenyiar.name}</span>
+                            </div>
+                            <div class="grid grid-cols-3 border-b pb-1">
+                                <span class="font-bold text-slate-600">Kategori Penyiar</span>
+                                <span class="col-span-2 text-slate-900">${targetPenyiar.category}</span>
+                            </div>
+                            <div class="grid grid-cols-3 border-b pb-1">
+                                <span class="font-bold text-slate-600">Jenis Kelamin</span>
+                                <span class="col-span-2 text-slate-900">${targetPenyiar.gender}</span>
+                            </div>
+                            <div class="grid grid-cols-3 border-b pb-1">
+                                <span class="font-bold text-slate-600">No. HP / WA</span>
+                                <span class="col-span-2 text-slate-900">${targetPenyiar.phone}</span>
+                            </div>
+                            <div class="grid grid-cols-3 border-b pb-1">
+                                <span class="font-bold text-slate-600">Alamat</span>
+                                <span class="col-span-2 text-slate-900">${targetPenyiar.address}</span>
+                            </div>
+                            <div class="grid grid-cols-3 border-b pb-1">
+                                <span class="font-bold text-slate-600">Tanggal Bergabung</span>
+                                <span class="col-span-2 text-slate-900">${targetPenyiar.joinDate}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-4 bg-slate-100 rounded-lg border border-slate-300 font-sans text-xs text-slate-800 leading-relaxed italic">
+                        <strong class="font-semibold text-slate-900 not-italic block mb-1">Surat Pernyataan Perusahaan:</strong>
+                        Manajemen Stasiun Radio JCCFM 101.5 MHz menyatakan bahwa Saudara/i <strong>${targetPenyiar.name}</strong> adalah benar penyiar aktif resmi dan berhak menggunakan fasilitas penyiaran sesuai dengan aturan operasional stasiun.
+                    </div>
+                </div>
+            `;
+
+            triggerPrintModal(htmlContent);
+        }
+
+        /* ==========================================================================
+           3. ADMIN DASHBOARD & MASTER PENYIAR MANAGEMENT
+           ========================================================================== */
+
+        function renderAdminDashboard() {
+            const container = document.getElementById('viewContainer');
+
+            container.innerHTML = `
+                <div class="space-y-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="glass-card p-5 rounded-2xl border border-slate-800">
+                            <div class="text-xs font-medium text-slate-400">Total Penyiar Terdaftar</div>
+                            <div class="text-2xl font-extrabold text-white mt-1">${penyiars.length} Penyiar</div>
+                            <div class="text-[11px] text-indigo-400 mt-1"><i class="fa-solid fa-users mr-1"></i>Aktif On-Air</div>
+                        </div>
+
+                        <div class="glass-card p-5 rounded-2xl border border-slate-800">
+                            <div class="text-xs font-medium text-slate-400">Sesi Absensi Hari Ini</div>
+                            <div class="text-2xl font-extrabold text-emerald-400 mt-1">${attendanceLogs.length} Check-In</div>
+                            <div class="text-[11px] text-emerald-400 mt-1">100% Tepat Waktu</div>
+                        </div>
+
+                        <div class="glass-card p-5 rounded-2xl border border-slate-800">
+                            <div class="text-xs font-medium text-slate-400">Pengajuan Cuti Pending</div>
+                            <div class="text-2xl font-extrabold text-amber-400 mt-1">${leaveRequests.filter(r => r.status === 'Pending').length} Surat</div>
+                            <div class="text-[11px] text-slate-400 mt-1">Membutuhkan Review</div>
+                        </div>
+
+                        <div class="glass-card p-5 rounded-2xl border border-slate-800">
+                            <div class="text-xs font-medium text-slate-400">Agenda Disposisi Aktif</div>
+                            <div class="text-2xl font-extrabold text-purple-400 mt-1">${agendas.length} Agenda</div>
+                            <div class="text-[11px] text-purple-400 mt-1">Berjalan</div>
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-6 rounded-3xl border border-slate-800">
+                        <h4 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-area text-purple-400"></i> Monitoring Kehadiran Global Penyiar (Minggu Ini)
+                        </h4>
+                        <div class="h-64">
+                            <canvas id="adminGlobalChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            initAdminChart();
+        }
+
+        function initAdminChart() {
+            const ctx = document.getElementById('adminGlobalChart');
+            if (!ctx) return;
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'],
+                    datasets: [{
+                        label: 'Total Sesi Broadcaster On-Air',
+                        data: [6, 8, 7, 9, 8, 10, 4],
+                        borderColor: '#a855f7',
+                        backgroundColor: 'rgba(168, 85, 247, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                        x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function renderAdminPenyiarMaster() {
+            const container = document.getElementById('viewContainer');
+
+            container.innerHTML = `
+                <div class="space-y-6">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-white">Master Biodata & Category Penyiar</h3>
+                            <p class="text-xs text-slate-400">Tambah penyiar baru, edit data, upload foto, dan eksport CV resmi.</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="openAddPenyiarModal()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center gap-2">
+                                <i class="fa-solid fa-user-plus"></i> Tambah Penyiar
+                            </button>
+                            <button onclick="openCategoryModal()" class="px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-purple-600/30 flex items-center gap-2">
+                                <i class="fa-solid fa-tags"></i> Jenis/Tipe Penyiar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="glass-card rounded-2xl border border-slate-800 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs text-slate-300">
+                                <thead class="bg-slate-900/90 text-slate-400 uppercase text-[10px] font-bold border-b border-slate-800">
+                                    <tr>
+                                        <th class="p-4">Foto & ID</th>
+                                        <th class="p-4">Nama Lengkap</th>
+                                        <th class="p-4">Kategori/Tipe</th>
+                                        <th class="p-4">No. HP & Alamat</th>
+                                        <th class="p-4">Tgl Bergabung</th>
+                                        <th class="p-4 text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-800/60">
+                                    ${penyiars.map(p => `
+                                        <tr class="hover:bg-slate-800/40 transition-colors">
+                                            <td class="p-4 flex items-center gap-3">
+                                                <img src="${p.photo}" class="w-10 h-10 rounded-full object-cover border border-indigo-500/40">
+                                                <div>
+                                                    <span class="font-mono text-indigo-400 font-bold block">${p.id}</span>
+                                                    <span class="text-[10px] text-slate-500">${p.gender}</span>
+                                                </div>
+                                            </td>
+                                            <td class="p-4">
+                                                <div class="font-bold text-white">${p.name}</div>
+                                                <div class="text-[10px] text-slate-400">${p.email}</div>
+                                            </td>
+                                            <td class="p-4">
+                                                <span class="px-2.5 py-1 rounded-full bg-indigo-500/20 text-indigo-300 font-semibold text-[10px]">
+                                                    ${p.category}
+                                                </span>
+                                            </td>
+                                            <td class="p-4">
+                                                <div class="text-white">${p.phone}</div>
+                                                <div class="text-[10px] text-slate-400 truncate max-w-[150px]">${p.address}</div>
+                                            </td>
+                                            <td class="p-4 font-mono text-slate-400">${p.joinDate}</td>
+                                            <td class="p-4 text-center">
+                                                <div class="flex items-center justify-center gap-1.5">
+                                                    <button onclick="openCVExportModal('${p.id}')" title="Export CV / Surat" class="p-2 bg-indigo-600/20 text-indigo-300 hover:bg-indigo-600 hover:text-white rounded-lg transition-all">
+                                                        <i class="fa-solid fa-file-pdf"></i>
+                                                    </button>
+                                                    <button onclick="deletePenyiar('${p.id}')" title="Hapus Penyiar" class="p-2 bg-rose-600/20 text-rose-300 hover:bg-rose-600 hover:text-white rounded-lg transition-all">
+                                                        <i class="fa-solid fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function openAddPenyiarModal() {
+            const body = `
+                <form onsubmit="saveNewPenyiar(event)" class="space-y-3 text-xs">
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">ID Penyiar</label>
+                        <input type="text" id="addPenId" required value="PEN-${100 + penyiars.length + 1}" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Nama Lengkap</label>
+                        <input type="text" id="addPenName" required placeholder="Contoh: Rina Wijaya" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block font-semibold text-slate-300 mb-1">Kategori/Tipe Penyiar</label>
+                            <select id="addPenCategory" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                                ${broadcasterCategories.map(c => `<option value="${c}">${c}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-300 mb-1">Jenis Kelamin</label>
+                            <select id="addPenGender" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                                <option value="Laki-laki">Laki-laki</option>
+                                <option value="Perempuan">Perempuan</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block font-semibold text-slate-300 mb-1">Email Akses Login</label>
+                            <input type="email" id="addPenEmail" required placeholder="rina@jccfm.com" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-300 mb-1">Password Initial</label>
+                            <input type="password" id="addPenPass" required value="123" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">URL Foto Profil</label>
+                        <input type="url" id="addPenPhoto" required value="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">No. HP / WA Aktif</label>
+                        <input type="text" id="addPenPhone" required placeholder="0812..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Alamat Rumah</label>
+                        <input type="text" id="addPenAddress" required placeholder="Jl..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Tanggal Bergabung</label>
+                        <input type="date" id="addPenJoinDate" required value="2026-07-27" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl mt-4">
+                        Simpan Data Penyiar
+                    </button>
+                </form>
+            `;
+            openAppModal('Tambah Penyiar Baru', body);
+        }
+
+        function saveNewPenyiar(e) {
+            e.preventDefault();
+            const newObj = {
+                id: document.getElementById('addPenId').value,
+                name: document.getElementById('addPenName').value,
+                category: document.getElementById('addPenCategory').value,
+                email: document.getElementById('addPenEmail').value,
+                password: document.getElementById('addPenPass').value,
+                photo: document.getElementById('addPenPhoto').value,
+                address: document.getElementById('addPenAddress').value,
+                phone: document.getElementById('addPenPhone').value,
+                joinDate: document.getElementById('addPenJoinDate').value,
+                gender: document.getElementById('addPenGender').value
+            };
+
+            penyiars.unshift(newObj);
+            closeAppModal();
+            showNotification(`Penyiar ${newObj.name} berhasil ditambahkan`);
+            renderAdminPenyiarMaster();
+        }
+
+        function deletePenyiar(id) {
+            penyiars = penyiars.filter(p => p.id !== id);
+            showNotification('Penyiar berhasil dihapus dari data');
+            renderAdminPenyiarMaster();
+        }
+
+        function openCategoryModal() {
+            const body = `
+                <div class="space-y-4 text-xs">
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Tambah Jenis/Tipe Penyiar Baru</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="newCategoryInput" placeholder="Contoh: News Anchor" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                            <button onclick="addCategory()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl">Tambah</button>
+                        </div>
+                    </div>
+                    <div class="space-y-2 border-t border-slate-800 pt-3">
+                        <label class="block font-semibold text-slate-400">Daftar Kategori Terdaftar:</label>
+                        ${broadcasterCategories.map((c, i) => `
+                            <div class="flex justify-between items-center p-2 rounded-xl bg-slate-950 border border-slate-800">
+                                <span class="text-white font-medium">${c}</span>
+                                <button onclick="removeCategory(${i})" class="text-rose-400 hover:text-rose-300 p-1"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            openAppModal('Kelola Master Jenis/Tipe Penyiar', body);
+        }
+
+        function addCategory() {
+            const val = document.getElementById('newCategoryInput').value.trim();
+            if (val && !broadcasterCategories.includes(val)) {
+                broadcasterCategories.push(val);
+                openCategoryModal();
+                showNotification('Jenis penyiar berhasil ditambahkan');
+            }
+        }
+
+        function removeCategory(index) {
+            broadcasterCategories.splice(index, 1);
+            openCategoryModal();
+            showNotification('Kategori dihapus');
+        }
+
+        /* ==========================================================================
+           4. AGENDA / DISPOSISI AGENDA MODULE WITH DEADLINE REMINDER
+           ========================================================================== */
+
+        function renderAgendaView() {
+            const container = document.getElementById('viewContainer');
+
+            if (currentUser.role === 'penyiar') {
+                const myAgendas = agendas.filter(a => a.assignedTo === currentUser.data.id || a.assignedTo === 'ALL');
+
+                container.innerHTML = `
+                    <div class="space-y-6">
+                        <div>
+                            <h3 class="text-xl font-bold text-white">Disposisi & Agenda Dari Admin</h3>
+                            <p class="text-xs text-slate-400">Terima atau lakukan banding pada agenda, perhatikan tenggat waktu (deadline), dan kirimkan laporan bukti.</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            ${myAgendas.map(a => `
+                                <div class="glass-card p-5 rounded-2xl border border-slate-800 space-y-4 flex flex-col justify-between">
+                                    <div class="space-y-2">
+                                        <div class="flex justify-between items-start gap-2">
+                                            <h4 class="text-base font-bold text-white">${a.title}</h4>
+                                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold ${a.accByAdmin ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}">
+                                                ${a.accByAdmin ? 'ACC Selesai' : a.status}
+                                            </span>
+                                        </div>
+                                        <p class="text-xs text-slate-300">${a.content}</p>
+                                        <div class="text-[11px] text-indigo-400 flex items-center gap-1 font-mono">
+                                            <i class="fa-solid fa-link"></i> <a href="${a.link}" target="_blank" class="hover:underline">Lampiran Dokumen Brief</a>
+                                        </div>
+                                        <div class="text-[11px] text-rose-400 font-semibold flex items-center gap-1 mt-1">
+                                            <i class="fa-solid fa-hourglass-end"></i> Tenggat Waktu (Deadline): ${a.date}
+                                        </div>
+                                    </div>
+
+                                    <div class="border-t border-slate-800/80 pt-3 space-y-2">
+                                        ${a.status === 'Pending' ? `
+                                            <div class="flex gap-2">
+                                                <button onclick="updateAgendaStatus('${a.id}', 'Diterima')" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl">Terima Agenda</button>
+                                                <button onclick="updateAgendaStatus('${a.id}', 'Banding')" class="flex-1 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl">Banding</button>
+                                            </div>
+                                        ` : `
+                                            <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-xs">
+                                                <div class="text-slate-400 font-semibold mb-1">Laporan Hasil Pengerjaan Anda:</div>
+                                                <p class="text-slate-300 italic mb-1">${a.responseNote || 'Belum ada catatan'}</p>
+                                                ${a.responseLink ? `<a href="${a.responseLink}" target="_blank" class="text-indigo-400 underline text-[11px]">Link Bukti Hasil</a>` : ''}
+                                            </div>
+                                            ${!a.accByAdmin ? `
+                                                <button onclick="openSubmitAgendaProofModal('${a.id}')" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl">
+                                                    Kirim / Update Bukti Pengerjaan
+                                                </button>
+                                            ` : ''}
+                                        `}
+                                    </div>
+                                </div>
+                            `).join('') || '<p class="text-xs text-slate-500">Tidak ada agenda disposisi saat ini.</p>'}
+                        </div>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="space-y-6">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h3 class="text-xl font-bold text-white">Kelola Disposisi Agenda Admin</h3>
+                                <p class="text-xs text-slate-400">Buat agenda dengan tenggat waktu, pantau respon penyiar, dan lakukan ACC.</p>
+                            </div>
+                            <button onclick="openCreateAgendaModal()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center gap-2">
+                                <i class="fa-solid fa-plus"></i> Buat Agenda Baru
+                            </button>
+                        </div>
+
+                        <div class="space-y-4">
+                            ${agendas.map(a => `
+                                <div class="glass-card p-5 rounded-2xl border border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                    <div class="space-y-1">
+                                        <div class="flex items-center gap-2">
+                                            <h4 class="text-base font-bold text-white">${a.title}</h4>
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300">
+                                                Dituju: ${a.assignedTo === 'ALL' ? 'Semua Penyiar' : a.assignedTo}
+                                            </span>
+                                        </div>
+                                        <p class="text-xs text-slate-300 max-w-xl">${a.content}</p>
+                                        <div class="text-[11px] text-rose-400 font-semibold">Deadline: ${a.date} | Link: ${a.link}</div>
+                                        <div class="text-xs text-slate-400 mt-2 p-2 rounded-lg bg-slate-900 border border-slate-800">
+                                            <strong>Laporan Penyiar:</strong> "${a.responseNote || 'Belum diisi'}" 
+                                            ${a.responseLink ? `| <a href="${a.responseLink}" target="_blank" class="text-indigo-400 underline">Bukti Link</a>` : ''}
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        ${!a.accByAdmin ? `
+                                            <button onclick="accAgenda('${a.id}')" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold">
+                                                ACC / Selesaikan
+                                            </button>
+                                        ` : `
+                                            <span class="px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 font-bold text-xs">ACC Selesai</span>
+                                        `}
+                                        <button onclick="deleteAgenda('${a.id}')" class="p-2 bg-rose-600/20 text-rose-300 hover:bg-rose-600 hover:text-white rounded-xl">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function updateAgendaStatus(id, status) {
+            const ag = agendas.find(a => a.id === id);
+            if (ag) {
+                ag.status = status;
+                showNotification(`Status agenda diperbarui menjadi ${status}`);
+                renderAgendaView();
+            }
+        }
+
+        function openSubmitAgendaProofModal(id) {
+            const ag = agendas.find(a => a.id === id);
+            const body = `
+                <form onsubmit="saveAgendaProof(event, '${id}')" class="space-y-3 text-xs">
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Catatan Hasil Pengerjaan</label>
+                        <textarea id="agendaNoteInput" required rows="3" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white" placeholder="Tuliskan keterangan hasil...">${ag.responseNote || ''}</textarea>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Link Lampiran Dokumen Bukti</label>
+                        <input type="url" id="agendaLinkInput" required value="${ag.responseLink || ''}" placeholder="https://..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl mt-2">
+                        Kirim Laporan Bukti Ke Admin
+                    </button>
+                </form>
+            `;
+            openAppModal('Kirim Bukti Hasil Agenda', body);
+        }
+
+        function saveAgendaProof(e, id) {
+            e.preventDefault();
+            const ag = agendas.find(a => a.id === id);
+            if (ag) {
+                ag.responseNote = document.getElementById('agendaNoteInput').value;
+                ag.responseLink = document.getElementById('agendaLinkInput').value;
+                ag.status = "Proses Selesai";
+                closeAppModal();
+                addNotification("Laporan Agenda Terkirim", `Penyiar telah mengirim bukti untuk agenda: ${ag.title}`, "agenda");
+                showNotification('Bukti hasil pengerjaan dikirim ke Admin');
+                renderAgendaView();
+            }
+        }
+
+        function openCreateAgendaModal() {
+            const body = `
+                <form onsubmit="saveNewAgenda(event)" class="space-y-3 text-xs">
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Judul Agenda / Disposisi</label>
+                        <input type="text" id="agTitle" required placeholder="Judul..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Ditujukan Kepada</label>
+                        <select id="agAssign" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                            <option value="ALL">Semua Penyiar (Global)</option>
+                            ${penyiars.map(p => `<option value="${p.id}">${p.name} (${p.id})</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Isi Detail Disposisi</label>
+                        <textarea id="agContent" required rows="3" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white" placeholder="Rincian instruksi..."></textarea>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Link Lampiran Dokumentasi</label>
+                        <input type="url" id="agLink" required placeholder="https://..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Tenggat Waktu (Deadline)</label>
+                        <input type="date" id="agDate" required value="2026-07-30" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl mt-2">
+                        Terbitkan Agenda Disposisi
+                    </button>
+                </form>
+            `;
+            openAppModal('Buat Disposisi Agenda Baru', body);
+        }
+
+        function saveNewAgenda(e) {
+            e.preventDefault();
+            const newAg = {
+                id: "AGD-" + Date.now(),
+                title: document.getElementById('agTitle').value,
+                assignedTo: document.getElementById('agAssign').value,
+                content: document.getElementById('agContent').value,
+                link: document.getElementById('agLink').value,
+                date: document.getElementById('agDate').value,
+                status: "Pending",
+                responseNote: "",
+                responseLink: "",
+                accByAdmin: false
+            };
+            agendas.unshift(newAg);
+            closeAppModal();
+            addNotification("Disposisi Agenda Baru", `Agenda baru diterbitkan dengan deadline: ${newAg.date}`, "agenda");
+            showNotification('Agenda disposisi diterbitkan');
+            renderAgendaView();
+        }
+
+        function accAgenda(id) {
+            const ag = agendas.find(a => a.id === id);
+            if (ag) {
+                ag.accByAdmin = true;
+                ag.status = "ACC Selesai";
+                showNotification('Agenda di-ACC dan dinyatakan selesai');
+                renderAgendaView();
+            }
+        }
+
+        function deleteAgenda(id) {
+            agendas = agendas.filter(a => a.id !== id);
+            showNotification('Agenda berhasil dihapus');
+            renderAgendaView();
+        }
+
+        /* ==========================================================================
+           5. RANGKUMAN & REKAPAN SIARAN PENYIAR (ADMIN & PENYIAR OPTION)
+           ========================================================================== */
+
+        function renderRangkumanAbsensiView() {
+            const container = document.getElementById('viewContainer');
+
+            if (currentUser.role === 'penyiar') {
+                const myLogs = attendanceLogs.filter(l => l.penyiarId === currentUser.data.id);
+
+                container.innerHTML = `
+                    <div class="space-y-6">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div>
+                                <h3 class="text-xl font-bold text-white">Rangkuman Absensi Penyiar</h3>
+                                <p class="text-xs text-slate-400">Total Jam Siaran Periode Bulanan & Export Laporan PDF Resmi.</p>
+                            </div>
+                            <button onclick="exportPenyiarAttendancePDF()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center gap-2">
+                                <i class="fa-solid fa-file-pdf"></i> Preview & Export PDF Bulanan
+                            </button>
+                        </div>
+
+                        <div class="glass-card rounded-2xl border border-slate-800 overflow-hidden">
+                            <div class="p-4 border-b border-slate-800 flex justify-between items-center text-xs">
+                                <span class="font-bold text-white">Laporan Kehadiran Periode Juli 2026</span>
+                                <span class="text-slate-400">Total Jam: <strong class="text-indigo-400 font-bold">${myLogs.length * 2} Jam</strong></span>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-xs text-slate-300">
+                                    <thead class="bg-slate-900 text-slate-400 uppercase text-[10px] font-bold">
+                                        <tr>
+                                            <th class="p-4">Tanggal</th>
+                                            <th class="p-4">Program Siaran</th>
+                                            <th class="p-4">Jam Check-In</th>
+                                            <th class="p-4">Jam Check-Out</th>
+                                            <th class="p-4">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-800/60">
+                                        ${myLogs.map(l => `
+                                            <tr class="hover:bg-slate-800/30">
+                                                <td class="p-4 font-mono">${l.date}</td>
+                                                <td class="p-4 font-bold text-white">${l.programName}</td>
+                                                <td class="p-4 font-mono text-emerald-400">${l.checkIn}</td>
+                                                <td class="p-4 font-mono text-amber-400">${l.checkOut}</td>
+                                                <td class="p-4"><span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold text-[10px]">${l.status}</span></td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // ADMIN REKAPAN SIARAN PENYIAR (OPSI PER PENYIAR & GLOBAL)
+                container.innerHTML = `
+                    <div class="space-y-6">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div>
+                                <h3 class="text-xl font-bold text-white">Rekapan Siaran Penyiar (Admin Dashboard)</h3>
+                                <p class="text-xs text-slate-400">Opsi filter rekapan siaran per penyiar spesifik atau global stasiun.</p>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="exportAdminGlobalPDF()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg flex items-center gap-2">
+                                    <i class="fa-solid fa-file-pdf"></i> Unduh Rekapan Global
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- FILTER CONTROLS FOR ADMIN -->
+                        <div class="glass-card p-4 rounded-2xl border border-slate-800 flex flex-col sm:flex-row items-center gap-4">
+                            <div class="w-full sm:w-1/2">
+                                <label class="block text-xs font-semibold text-slate-300 mb-1">Filter Opsi Penyiar:</label>
+                                <select id="adminRekapanFilterSelect" onchange="filterAdminRekapan()" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-xs text-white">
+                                    <option value="GLOBAL">-- Global Semua Penyiar --</option>
+                                    ${penyiars.map(p => `<option value="${p.id}">${p.name} (${p.id})</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="w-full sm:w-1/2 flex items-end gap-2 mt-auto">
+                                <button onclick="downloadSelectedRekapanPDF()" class="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold shadow flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-download"></i> Unduh Rekapan Sesuai Pilihan
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="glass-card rounded-2xl border border-slate-800 overflow-hidden">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-xs text-slate-300">
+                                    <thead class="bg-slate-900 text-slate-400 uppercase text-[10px] font-bold">
+                                        <tr>
+                                            <th class="p-4">Penyiar</th>
+                                            <th class="p-4">Program</th>
+                                            <th class="p-4">Tanggal</th>
+                                            <th class="p-4">Waktu Siaran</th>
+                                            <th class="p-4">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="adminRekapanTableBody" class="divide-y divide-slate-800/60">
+                                        ${attendanceLogs.map(l => `
+                                            <tr class="hover:bg-slate-800/30">
+                                                <td class="p-4 font-bold text-white">${l.penyiarName}</td>
+                                                <td class="p-4 text-indigo-300">${l.programName}</td>
+                                                <td class="p-4 font-mono text-slate-400">${l.date}</td>
+                                                <td class="p-4 font-mono text-xs">${l.checkIn} - ${l.checkOut}</td>
+                                                <td class="p-4"><span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold text-[10px]">${l.status}</span></td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function filterAdminRekapan() {
+            const val = document.getElementById('adminRekapanFilterSelect').value;
+            const tbody = document.getElementById('adminRekapanTableBody');
+
+            let filtered = attendanceLogs;
+            if (val !== 'GLOBAL') {
+                filtered = attendanceLogs.filter(l => l.penyiarId === val);
+            }
+
+            tbody.innerHTML = filtered.map(l => `
+                <tr class="hover:bg-slate-800/30">
+                    <td class="p-4 font-bold text-white">${l.penyiarName}</td>
+                    <td class="p-4 text-indigo-300">${l.programName}</td>
+                    <td class="p-4 font-mono text-slate-400">${l.date}</td>
+                    <td class="p-4 font-mono text-xs">${l.checkIn} - ${l.checkOut}</td>
+                    <td class="p-4"><span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold text-[10px]">${l.status}</span></td>
+                </tr>
+            `).join('') || `<tr><td colspan="5" class="p-6 text-center text-slate-500 italic">Tidak ada rekapan untuk penyiar ini.</td></tr>`;
+        }
+
+        function downloadSelectedRekapanPDF() {
+            const val = document.getElementById('adminRekapanFilterSelect').value;
+            if (val === 'GLOBAL') {
+                exportAdminGlobalPDF();
+            } else {
+                exportAdminPersonalPDF(val);
+            }
+        }
+
+        function exportPenyiarAttendancePDF() {
+            const p = currentUser.data;
+            const myLogs = attendanceLogs.filter(l => l.penyiarId === p.id);
+
+            const htmlContent = `
+                <div class="space-y-4 font-sans text-xs">
+                    <div class="text-center border-b pb-2 mb-4">
+                        <h3 class="text-base font-bold text-slate-900">REKAPITULASI SIARAN PENYIAR</h3>
+                        <p class="text-xs text-slate-600">Periode: Juli 2026</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 bg-slate-100 p-3 rounded text-slate-800">
+                        <div><strong>Nama Penyiar:</strong> ${p.name}</div>
+                        <div><strong>ID Penyiar:</strong> ${p.id}</div>
+                        <div><strong>Kategori:</strong> ${p.category}</div>
+                        <div><strong>Total Jam Siaran:</strong> ${myLogs.length * 2} Jam</div>
+                    </div>
+
+                    <table class="w-full border-collapse border border-slate-300 text-left mt-4">
+                        <thead>
+                            <tr class="bg-slate-200 text-slate-900">
+                                <th class="border border-slate-300 p-2">Tanggal</th>
+                                <th class="border border-slate-300 p-2">Program Acara</th>
+                                <th class="border border-slate-300 p-2">Check-In</th>
+                                <th class="border border-slate-300 p-2">Check-Out</th>
+                                <th class="border border-slate-300 p-2">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${myLogs.map(l => `
+                                <tr>
+                                    <td class="border border-slate-300 p-2 font-mono">${l.date}</td>
+                                    <td class="border border-slate-300 p-2 font-semibold">${l.programName}</td>
+                                    <td class="border border-slate-300 p-2 font-mono">${l.checkIn}</td>
+                                    <td class="border border-slate-300 p-2 font-mono">${l.checkOut}</td>
+                                    <td class="border border-slate-300 p-2">${l.status}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            triggerPrintModal(htmlContent);
+        }
+
+                function exportAdminPersonalPDF(penyiarId) {
+            const p = penyiars.find(x => x.id === penyiarId);
+            if (!p) return;
+            const myLogs = attendanceLogs.filter(l => l.penyiarId === p.id);
+
+            const htmlContent = `
+                <div class="space-y-4 font-sans text-xs">
+                    <div class="text-center border-b pb-2 mb-4">
+                        <h3 class="text-base font-bold text-slate-900">REKAPITULASI SIARAN PENYIAR</h3>
+                        <p class="text-xs text-slate-600">Periode: Bulan Berjalan</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 bg-slate-100 p-3 rounded text-slate-800">
+                        <div><strong>Nama Penyiar:</strong> ${p.name}</div>
+                        <div><strong>ID Penyiar:</strong> ${p.id}</div>
+                        <div><strong>Kategori:</strong> ${p.category}</div>
+                        <div><strong>Total Jam Siaran:</strong> ${myLogs.length * 2} Jam</div>
+                    </div>
+
+                    <table class="w-full border-collapse border border-slate-300 text-left mt-4">
+                        <thead>
+                            <tr class="bg-slate-200 text-slate-900">
+                                <th class="border border-slate-300 p-2">Tanggal</th>
+                                <th class="border border-slate-300 p-2">Program Acara</th>
+                                <th class="border border-slate-300 p-2">Check-In</th>
+                                <th class="border border-slate-300 p-2">Check-Out</th>
+                                <th class="border border-slate-300 p-2">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${myLogs.map(l => `
+                                <tr>
+                                    <td class="border border-slate-300 p-2 font-mono">${l.date}</td>
+                                    <td class="border border-slate-300 p-2 font-semibold">${l.programName}</td>
+                                    <td class="border border-slate-300 p-2 font-mono">${l.checkIn}</td>
+                                    <td class="border border-slate-300 p-2 font-mono">${l.checkOut}</td>
+                                    <td class="border border-slate-300 p-2">${l.status}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            triggerPrintModal(htmlContent);
+        }
+
+function exportAdminGlobalPDF() {
+            const htmlContent = `
+                <div class="space-y-4 font-sans text-xs">
+                    <div class="text-center border-b pb-2 mb-4">
+                        <h3 class="text-base font-bold text-slate-900">REKAPITULASI SIARAN PENYIAR - GLOBAL</h3>
+                        <p class="text-xs text-slate-600">Periode Operasional: Bulan Juli 2026</p>
+                    </div>
+
+                    <table class="w-full border-collapse border border-slate-300 text-left">
+                        <thead>
+                            <tr class="bg-slate-200 text-slate-900">
+                                <th class="border border-slate-300 p-2">Penyiar</th>
+                                <th class="border border-slate-300 p-2">Program</th>
+                                <th class="border border-slate-300 p-2">Tanggal</th>
+                                <th class="border border-slate-300 p-2">Waktu Siaran</th>
+                                <th class="border border-slate-300 p-2">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${attendanceLogs.map(l => `
+                                <tr>
+                                    <td class="border border-slate-300 p-2 font-semibold">${l.penyiarName}</td>
+                                    <td class="border border-slate-300 p-2">${l.programName}</td>
+                                    <td class="border border-slate-300 p-2 font-mono">${l.date}</td>
+                                    <td class="border border-slate-300 p-2 font-mono">${l.checkIn} - ${l.checkOut}</td>
+                                    <td class="border border-slate-300 p-2">${l.status}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            triggerPrintModal(htmlContent);
+        }
+
+        /* ==========================================================================
+           6. ACHIEVEMENT / EVENT MENU WITH DEADLINE REMINDER
+           ========================================================================== */
+
+        function renderAchievementView() {
+            const container = document.getElementById('viewContainer');
+
+            if (currentUser.role === 'penyiar') {
+                container.innerHTML = `
+                    <div class="space-y-6">
+                        <div>
+                            <h3 class="text-xl font-bold text-white">Event & Achievement Penyiaran</h3>
+                            <p class="text-xs text-slate-400">Apply challenge/achievement sebelum tenggat waktu untuk mendapatkan reward & sertifikat.</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            ${achievements.map(ach => {
+                    const myParticipated = ach.participants.find(p => p.penyiarId === currentUser.data.id);
+                    return `
+                                    <div class="glass-card p-6 rounded-3xl border border-slate-800 flex flex-col justify-between space-y-4 relative overflow-hidden">
+                                        <div class="space-y-2">
+                                            <div class="flex justify-between items-start">
+                                                <h4 class="text-lg font-bold text-white">${ach.title}</h4>
+                                                <span class="px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-bold">
+                                                    Kuota: ${ach.quota - ach.participants.length} Tersisa
+                                                </span>
+                                            </div>
+                                            <p class="text-xs text-slate-300">${ach.description}</p>
+                                            <div class="text-[11px] text-amber-400 font-semibold flex items-center gap-1.5">
+                                                <i class="fa-solid fa-gift"></i> Reward: ${ach.reward}
+                                            </div>
+                                            <div class="text-[11px] text-rose-400 font-semibold flex items-center gap-1">
+                                                <i class="fa-solid fa-hourglass-end"></i> Tenggat Waktu Apply: ${ach.deadline}
+                                            </div>
+                                        </div>
+
+                                        <div class="border-t border-slate-800 pt-4">
+                                            ${myParticipated ? `
+                                                <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs flex justify-between items-center">
+                                                    <div>
+                                                        <span class="text-slate-400">Status Anda:</span>
+                                                        <span class="font-bold text-emerald-400 ml-1">${myParticipated.status}</span>
+                                                    </div>
+                                                    <span class="text-[10px] text-indigo-400 underline">Bukti Terkirim</span>
+                                                </div>
+                                            ` : `
+                                                <button onclick="openJoinAchievementModal('${ach.id}')" class="w-full py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-purple-600/30">
+                                                    Apply Challenge / Achievement
+                                                </button>
+                                            `}
+                                        </div>
+                                    </div>
+                                `;
+                }).join('')}
+                        </div>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="space-y-6">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h3 class="text-xl font-bold text-white">Kelola Event & Challenge Penyiar</h3>
+                                <p class="text-xs text-slate-400">Buat tantangan dengan deadline, kuota, dan review laporan bukti peserta.</p>
+                            </div>
+                            <button onclick="openCreateAchievementModal()" class="px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-purple-600/30 flex items-center gap-2">
+                                <i class="fa-solid fa-plus"></i> Buat Event Baru
+                            </button>
+                        </div>
+
+                        <div class="space-y-4">
+                            ${achievements.map(ach => `
+                                <div class="glass-card p-5 rounded-2xl border border-slate-800 space-y-4">
+                                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
+                                        <div>
+                                            <h4 class="text-base font-bold text-white">${ach.title}</h4>
+                                            <p class="text-xs text-slate-300">${ach.description}</p>
+                                            <div class="text-[11px] text-amber-400 font-semibold mt-1">Reward: ${ach.reward} | Deadline: ${ach.deadline}</div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <button onclick="deleteAchievement('${ach.id}')" class="p-2 bg-rose-600/20 text-rose-300 hover:bg-rose-600 hover:text-white rounded-xl">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="border-t border-slate-800/80 pt-3">
+                                        <div class="text-xs font-bold text-slate-400 mb-2">Peserta Terdaftar (${ach.participants.length}):</div>
+                                        ${ach.participants.map(p => `
+                                            <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex justify-between items-center text-xs">
+                                                <div>
+                                                    <span class="font-bold text-white">${p.penyiarId}</span>
+                                                    <a href="${p.proofLink}" target="_blank" class="text-indigo-400 underline ml-2">Bukti Link</a>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold text-[10px]">${p.status}</span>
+                                                    <button onclick="approveAchievementProof('${ach.id}', '${p.penyiarId}')" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold">
+                                                        ACC Selesai
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        `).join('') || '<p class="text-xs text-slate-500 italic">Belum ada peserta mengirimkan bukti.</p>'}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function openJoinAchievementModal(id) {
+            const body = `
+                <form onsubmit="saveAchievementSubmission(event, '${id}')" class="space-y-3 text-xs">
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Link Bukti Apply Challenge</label>
+                        <input type="url" id="achProofLink" required placeholder="https://..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl mt-2">
+                        Kirimkan Bukti Apply & Ikuti Event
+                    </button>
+                </form>
+            `;
+            openAppModal('Apply Challenge / Achievement', body);
+        }
+
+        function saveAchievementSubmission(e, id) {
+            e.preventDefault();
+            const ach = achievements.find(a => a.id === id);
+            if (ach) {
+                ach.participants.push({
+                    penyiarId: currentUser.data.id,
+                    proofLink: document.getElementById('achProofLink').value,
+                    status: "Review Admin"
+                });
+                closeAppModal();
+                addNotification("Apply Challenge Berhasil", `Anda berhasil apply challenge: ${ach.title}`, "challenge");
+                showNotification('Bukti apply challenge berhasil dikirim!');
+                renderAchievementView();
+            }
+        }
+
+        function openCreateAchievementModal() {
+            const body = `
+                <form onsubmit="saveNewAchievement(event)" class="space-y-3 text-xs">
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Nama Tantangan / Event</label>
+                        <input type="text" id="achTitle" required placeholder="Judul..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Deskripsi & Syarat</label>
+                        <textarea id="achDesc" required rows="2" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white"></textarea>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Hadiah / Reward</label>
+                        <input type="text" id="achReward" required placeholder="Bonus Rp..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block font-semibold text-slate-300 mb-1">Kuota Peserta</label>
+                            <input type="number" id="achQuota" required value="5" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-300 mb-1">Tenggat Waktu Apply</label>
+                            <input type="date" id="achDeadline" required value="2026-08-31" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl mt-2">
+                        Terbitkan Event
+                    </button>
+                </form>
+            `;
+            openAppModal('Buat Challenge Event Baru', body);
+        }
+
+        function saveNewAchievement(e) {
+            e.preventDefault();
+            const newAch = {
+                id: "ACH-" + Date.now(),
+                title: document.getElementById('achTitle').value,
+                description: document.getElementById('achDesc').value,
+                reward: document.getElementById('achReward').value,
+                quota: parseInt(document.getElementById('achQuota').value),
+                deadline: document.getElementById('achDeadline').value,
+                period: "Juli - Agustus 2026",
+                participants: []
+            };
+            achievements.unshift(newAch);
+            closeAppModal();
+            addNotification("Event Challenge Baru", `Tantangan baru diterbitkan dengan deadline: ${newAch.deadline}`, "challenge");
+            showNotification('Event tantangan diterbitkan!');
+            renderAchievementView();
+        }
+
+        function approveAchievementProof(achId, penyiarId) {
+            const ach = achievements.find(a => a.id === achId);
+            if (ach) {
+                const part = ach.participants.find(p => p.penyiarId === penyiarId);
+                if (part) {
+                    part.status = "Disetujui / ACC";
+                    showNotification('Tugas event telah di-ACC!');
+                    renderAchievementView();
+                }
+            }
+        }
+
+        function deleteAchievement(id) {
+            achievements = achievements.filter(a => a.id !== id);
+            showNotification('Event dihapus');
+            renderAchievementView();
+        }
+
+        /* ==========================================================================
+           7. CUTI / IJIN MODULE WITH DEADLINE REMINDER
+           ========================================================================== */
+
+        function renderCutiView() {
+            const container = document.getElementById('viewContainer');
+
+            if (currentUser.role === 'penyiar') {
+                const myLeaves = leaveRequests.filter(l => l.penyiarId === currentUser.data.id);
+
+                container.innerHTML = `
+                    <div class="space-y-6">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h3 class="text-xl font-bold text-white">Pengajuan Cuti / Ijin Penyiar</h3>
+                                <p class="text-xs text-slate-400">Ajukan surat cuti/ijin sebelum tenggat waktu yang ditentukan admin.</p>
+                            </div>
+                            <button onclick="openAddLeaveModal()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg flex items-center gap-2">
+                                <i class="fa-solid fa-plus"></i> Ajukan Cuti Baru
+                            </button>
+                        </div>
+
+                        <div class="space-y-4">
+                            ${myLeaves.map(l => `
+                                <div class="glass-card p-5 rounded-2xl border border-slate-800 flex justify-between items-center text-xs">
+                                    <div class="space-y-1">
+                                        <div class="flex items-center gap-2">
+                                            <h4 class="font-bold text-white">${l.type}</h4>
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${l.status === 'ACC' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}">${l.status}</span>
+                                        </div>
+                                        <p class="text-slate-300">${l.reason}</p>
+                                        <div class="text-[11px] text-slate-400 font-mono">Tanggal: ${l.startDate} s/d ${l.endDate}</div>
+                                        <div class="text-[11px] text-rose-400 font-semibold">Tenggat Pengajuan: ${l.deadline}</div>
+                                        ${l.adminNotes ? `<div class="text-indigo-300 italic mt-1">Catatan Admin: ${l.adminNotes}</div>` : ''}
+${l.status === 'ACC' ? `<div class="mt-3"><button onclick="printSuratIzin('${l.id}')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-bold shadow flex items-center gap-2"><i class="fa-solid fa-print"></i> Cetak Surat Izin</button></div>` : ''}
+                                    </div>
+                                </div>
+                            `).join('') || '<p class="text-xs text-slate-500 italic">Belum ada riwayat pengajuan cuti.</p>'}
+                        </div>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="space-y-6">
+                        <div>
+                            <h3 class="text-xl font-bold text-white">Persetujuan Cuti / Ijin Penyiar</h3>
+                            <p class="text-xs text-slate-400">Review dan berikan persetujuan (ACC) atau penolakan surat cuti.</p>
+                        </div>
+
+                        <div class="space-y-4">
+                            ${leaveRequests.map(l => `
+                                <div class="glass-card p-5 rounded-2xl border border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs">
+                                    <div class="space-y-1">
+                                        <div class="flex items-center gap-2">
+                                            <h4 class="font-bold text-white">${l.penyiarName} (${l.type})</h4>
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${l.status === 'ACC' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'}">${l.status}</span>
+                                        </div>
+                                        <p class="text-slate-300">${l.reason}</p>
+                                        <div class="text-slate-400 font-mono">Durasi: ${l.startDate} s/d ${l.endDate} | Deadline: ${l.deadline}</div>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button onclick="approveLeave('${l.id}', 'ACC')" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl">ACC</button>
+                                        <button onclick="approveLeave('${l.id}', 'Ditolak')" class="px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl">Tolak</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+                function printSuratIzin(leaveId) {
+            const l = leaveRequests.find(x => x.id === leaveId);
+            if (!l) return;
+            const htmlContent = `
+                <div class="space-y-4 font-sans text-xs">
+                    <div class="text-center border-b pb-2 mb-4">
+                        <h3 class="text-base font-bold text-slate-900">SURAT KETERANGAN IZIN / CUTI</h3>
+                        <p class="text-xs text-slate-600">ID Pengajuan: ${l.id}</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-slate-800 leading-relaxed">
+                        <p class="mb-2">Yang bertanda tangan di bawah ini menerangkan bahwa:</p>
+                        <table class="mb-4">
+                            <tr><td class="pr-4 font-semibold">Nama Penyiar</td><td>: ${l.penyiarName}</td></tr>
+                            <tr><td class="pr-4 font-semibold">ID Penyiar</td><td>: ${l.penyiarId}</td></tr>
+                        </table>
+                        <p class="mb-2">Telah diberikan izin untuk melaksanakan <strong>${l.type}</strong> dengan rincian sebagai berikut:</p>
+                        <table class="mb-4">
+                            <tr><td class="pr-4 font-semibold">Alasan / Keterangan</td><td>: ${l.reason}</td></tr>
+                            <tr><td class="pr-4 font-semibold">Tanggal Mulai</td><td>: ${l.startDate}</td></tr>
+                            <tr><td class="pr-4 font-semibold">Tanggal Selesai</td><td>: ${l.endDate}</td></tr>
+                        </table>
+                        <p>Status Pengajuan: <strong>${l.status}</strong></p>
+                        ${l.adminNotes ? `<p class="mt-2">Catatan Admin: <em>${l.adminNotes}</em></p>` : ''}
+                    </div>
+                </div>
+            `;
+            triggerPrintModal(htmlContent);
+        }
+
+function openAddLeaveModal() {
+            const body = `
+                <form onsubmit="saveNewLeave(event)" class="space-y-3 text-xs">
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Jenis Cuti / Ijin</label>
+                        <select id="leaveType" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                            <option value="Cuti Tahunan">Cuti Tahunan</option>
+                            <option value="Ijin Sakit">Ijin Sakit</option>
+                            <option value="Ijin Keperluan Keluarga">Ijin Keperluan Keluarga</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Alasan</label>
+                        <textarea id="leaveReason" required rows="2" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white"></textarea>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block font-semibold text-slate-300 mb-1">Mulai Tanggal</label>
+                            <input type="date" id="leaveStart" required value="2026-08-01" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-300 mb-1">Sampai Tanggal</label>
+                            <input type="date" id="leaveEnd" required value="2026-08-03" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Tenggat Batas Pengajuan</label>
+                        <input type="date" id="leaveDeadline" required value="2026-07-28" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl mt-2">
+                        Kirim Pengajuan Cuti
+                    </button>
+                </form>
+            `;
+            openAppModal('Pengajuan Cuti / Ijin Baru', body);
+        }
+
+        function saveNewLeave(e) {
+            e.preventDefault();
+            const newL = {
+                id: "CUT-" + Date.now(),
+                penyiarId: currentUser.data.id,
+                penyiarName: currentUser.data.name,
+                type: document.getElementById('leaveType').value,
+                reason: document.getElementById('leaveReason').value,
+                startDate: document.getElementById('leaveStart').value,
+                endDate: document.getElementById('leaveEnd').value,
+                deadline: document.getElementById('leaveDeadline').value,
+                status: "Pending",
+                adminNotes: ""
+            };
+            leaveRequests.unshift(newL);
+            closeAppModal();
+            addNotification("Pengajuan Cuti", `Pengajuan cuti oleh ${currentUser.data.name} menunggu review`, "leave");
+            showNotification('Pengajuan cuti berhasil dikirim');
+            renderCutiView();
+        }
+
+        function approveLeave(id, status) {
+            const l = leaveRequests.find(item => item.id === id);
+            if (l) {
+                l.status = status;
+                l.adminNotes = status === 'ACC' ? 'Disetujui oleh Admin' : 'Ditolak oleh Admin';
+                showNotification(`Cuti ${status}`);
+                renderCutiView();
+            }
+        }
+
+        /* ==========================================================================
+           8. DATABASE PENDENGAR WITH SEARCH BAR & EXPORT TO EXCEL (.XLS/.CSV)
+           ========================================================================== */
+
+        function renderCustomerView() {
+            const container = document.getElementById('viewContainer');
+
+            container.innerHTML = `
+                <div class="space-y-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h3 class="text-xl font-bold text-white">Database Pendengar Radio</h3>
+                            <p class="text-xs text-slate-400">Pencarian data pendengar dan ekspor ke Excel (CSV format).</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="exportListenersToExcel()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-lg flex items-center gap-2">
+                                <i class="fa-solid fa-file-excel"></i> Eksport ke Excel
+                            </button>
+                            <button onclick="openAddListenerModal()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg flex items-center gap-2">
+                                <i class="fa-solid fa-user-plus"></i> Tambah Pendengar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- SEARCH BAR FOR LISTENERS -->
+                    <div class="glass-card p-4 rounded-2xl border border-slate-800">
+                        <div class="relative">
+                            <i class="fa-solid fa-search absolute left-3.5 top-3 text-slate-500"></i>
+                            <input type="text" id="listenerSearchInput" onkeyup="filterListenersTable()" placeholder="Cari nama pendengar, alamat, atau program favorit..." class="w-full bg-slate-900 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-xs text-white focus:outline-none focus:border-indigo-500">
+                        </div>
+                    </div>
+
+                    <div class="glass-card rounded-2xl border border-slate-800 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs text-slate-300">
+                                <thead class="bg-slate-900 text-slate-400 uppercase text-[10px] font-bold">
+                                    <tr>
+                                        <th class="p-4">Nama Pendengar</th>
+                                        <th class="p-4">Alamat</th>
+                                        <th class="p-4">No. HP / WA</th>
+                                        <th class="p-4">Gender</th>
+                                        <th class="p-4">Program Favorit</th>
+                                        <th class="p-4">Pencatat</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="listenerTableBody" class="divide-y divide-slate-800/60">
+                                    ${listenersData.map(l => `
+                                        <tr class="hover:bg-slate-800/30">
+                                            <td class="p-4 font-bold text-white">${l.name}</td>
+                                            <td class="p-4 text-slate-300">${l.address}</td>
+                                            <td class="p-4 font-mono">${l.phone}</td>
+                                            <td class="p-4">${l.gender}</td>
+                                            <td class="p-4 text-indigo-300">${l.favoriteProgram}</td>
+                                            <td class="p-4 text-slate-500 text-[10px]">${l.addedBy}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function filterListenersTable() {
+            const query = document.getElementById('listenerSearchInput').value.toLowerCase();
+            const tbody = document.getElementById('listenerTableBody');
+
+            const filtered = listenersData.filter(l =>
+                l.name.toLowerCase().includes(query) ||
+                l.address.toLowerCase().includes(query) ||
+                l.favoriteProgram.toLowerCase().includes(query) ||
+                l.phone.includes(query)
+            );
+
+            tbody.innerHTML = filtered.map(l => `
+                <tr class="hover:bg-slate-800/30">
+                    <td class="p-4 font-bold text-white">${l.name}</td>
+                    <td class="p-4 text-slate-300">${l.address}</td>
+                    <td class="p-4 font-mono">${l.phone}</td>
+                    <td class="p-4">${l.gender}</td>
+                    <td class="p-4 text-indigo-300">${l.favoriteProgram}</td>
+                    <td class="p-4 text-slate-500 text-[10px]">${l.addedBy}</td>
+                </tr>
+            `).join('') || `<tr><td colspan="6" class="p-6 text-center text-slate-500 italic">Tidak ditemukan pendengar yang sesuai.</td></tr>`;
+        }
+
+        function openAddListenerModal() {
+            const body = `
+                <form onsubmit="saveNewListener(event)" class="space-y-3 text-xs">
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Nama Pendengar</label>
+                        <input type="text" id="lisName" required placeholder="Nama..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block font-semibold text-slate-300 mb-1">No. HP / WA</label>
+                            <input type="text" id="lisPhone" required placeholder="0812..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-300 mb-1">Gender</label>
+                            <select id="lisGender" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                                <option value="Laki-laki">Laki-laki</option>
+                                <option value="Perempuan">Perempuan</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Alamat / Wilayah</label>
+                        <input type="text" id="lisAddress" required placeholder="Kecamatan..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Program Radio Favorit</label>
+                        <select id="lisProg" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                            ${radioPrograms.map(p => `<option value="${p.name}">${p.name}</option>`).join('')}
+                        </select>
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl mt-2">
+                        Simpan Pendengar Baru
+                    </button>
+                </form>
+            `;
+            openAppModal('Tambah Database Pendengar', body);
+        }
+
+        function saveNewListener(e) {
+            e.preventDefault();
+            const newL = {
+                id: "LIS-" + Date.now(),
+                name: document.getElementById('lisName').value,
+                address: document.getElementById('lisAddress').value,
+                phone: document.getElementById('lisPhone').value,
+                gender: document.getElementById('lisGender').value,
+                favoriteProgram: document.getElementById('lisProg').value,
+                addedBy: currentUser.data.name
+            };
+            listenersData.unshift(newL);
+            closeAppModal();
+            showNotification('Pendengar baru berhasil disimpan');
+            renderCustomerView();
+        }
+
+        function exportListenersToExcel() {
+            let csvContent = "data:text/csv;charset=utf-8,ID,Nama Pendengar,Alamat,No HP,Gender,Program Favorit,Pencatat\n";
+            listenersData.forEach(l => {
+                csvContent += `"${l.id}","${l.name}","${l.address}","${l.phone}","${l.gender}","${l.favoriteProgram}","${l.addedBy}"\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "database_pendengar_jccfm.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showNotification('Database pendengar berhasil dieksport ke file Excel (CSV)');
+        }
+
+        /* ==========================================================================
+           9. ADMIN KOP & DOKUMENTASI TEMPLATE EDITOR
+           ========================================================================== */
+
+        function renderAdminSettingsView() {
+            const container = document.getElementById('viewContainer');
+
+            container.innerHTML = `
+                <div class="max-w-3xl mx-auto space-y-6">
+                    <div class="glass-card p-6 rounded-3xl border border-slate-800">
+                        <h3 class="text-xl font-bold text-white mb-2">Editor KOP & Template Surat / Dokumentasi</h3>
+                        <p class="text-xs text-slate-400 mb-6">Sesuaikan isian KOP surat, alamat stasiun, penandatangan resmi, serta header dokumentasi laporan yang akan tercetak otomatis.</p>
+
+                        <form onsubmit="saveKopConfig(event)" class="space-y-4 text-xs">
+                            <div>
+                                <label class="block font-semibold text-slate-300 mb-1">Nama Stasiun Radio (KOP)</label>
+                                <input type="text" id="cfgStationName" required value="${kopSuratConfig.stationName}" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white">
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-slate-300 mb-1">Alamat & Kontak Stasiun (KOP)</label>
+                                <input type="text" id="cfgAddress" required value="${kopSuratConfig.address}" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white">
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-slate-300 mb-1">Judul Template Dokumen / Laporan</label>
+                                <input type="text" id="cfgDocHeader" required value="${kopSuratConfig.docTemplateHeader}" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block font-semibold text-slate-300 mb-1">Kota Penerbitan</label>
+                                    <input type="text" id="cfgCity" required value="${kopSuratConfig.city}" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white">
+                                </div>
+                                <div>
+                                    <label class="block font-semibold text-slate-300 mb-1">Jabatan Penandatangan</label>
+                                    <input type="text" id="cfgSigneeTitle" required value="${kopSuratConfig.signeeTitle}" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-slate-300 mb-1">Nama Lengkap Penandatangan (Pejabat)</label>
+                                <input type="text" id="cfgSigneeName" required value="${kopSuratConfig.signeeName}" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white">
+                            </div>
+
+                            <button type="submit" class="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl mt-4">
+                                Simpan Konfigurasi Kop & Template
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        function saveKopConfig(e) {
+            e.preventDefault();
+            kopSuratConfig.stationName = document.getElementById('cfgStationName').value;
+            kopSuratConfig.address = document.getElementById('cfgAddress').value;
+            kopSuratConfig.docTemplateHeader = document.getElementById('cfgDocHeader').value;
+            kopSuratConfig.city = document.getElementById('cfgCity').value;
+            kopSuratConfig.signeeTitle = document.getElementById('cfgSigneeTitle').value;
+            kopSuratConfig.signeeName = document.getElementById('cfgSigneeName').value;
+
+            showNotification('Konfigurasi KOP & template surat berhasil diperbarui!');
+        }
+
+        /* ==========================================================================
+           PROGRAM LIST & MODAL HELPERS
+           ========================================================================== */
+
+        function renderProgramListView() {
+            const container = document.getElementById('viewContainer');
+
+            container.innerHTML = `
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h3 class="text-xl font-bold text-white">Daftar Schedule & Program Radio JCCFM</h3>
+                            <p class="text-xs text-slate-400">Jadwal resmi program penyiaran on-air yang digunakan saat Check-In.</p>
+                        </div>
+                        ${currentUser.role === 'admin' ? `
+                            <button onclick="openAddProgramModal()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center gap-2">
+                                <i class="fa-solid fa-plus"></i> Tambah Program Radio
+                            </button>
+                        ` : ''}
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${radioPrograms.map(p => `
+                            <div class="glass-card p-5 rounded-2xl border border-slate-800 flex justify-between items-center">
+                                <div class="space-y-1">
+                                    <span class="px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-bold">
+                                        ${p.category}
+                                    </span>
+                                    <h4 class="text-base font-bold text-white">${p.name}</h4>
+                                    <div class="text-xs text-amber-400 font-mono font-semibold">
+                                        <i class="fa-solid fa-clock mr-1"></i> Jam Acara: ${p.time}
+                                    </div>
+                                </div>
+                                ${currentUser.role === 'admin' ? `
+                                    <button onclick="deleteProgram('${p.id}')" class="p-2 bg-rose-600/20 text-rose-300 hover:bg-rose-600 hover:text-white rounded-xl">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function openAddProgramModal() {
+            const body = `
+                <form onsubmit="saveNewProgram(event)" class="space-y-3 text-xs">
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Nama Program Siaran</label>
+                        <input type="text" id="progName" required placeholder="Contoh: JCC Morning Show" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Waktu Tayang</label>
+                        <input type="text" id="progTime" required placeholder="06:00 - 08:00 WIB" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Kategori Program</label>
+                        <input type="text" id="progCat" required placeholder="Talkshow / Music" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl mt-2">
+                        Simpan Program Baru
+                    </button>
+                </form>
+            `;
+            openAppModal('Tambah Program Radio', body);
+        }
+
+        function saveNewProgram(e) {
+            e.preventDefault();
+            radioPrograms.push({
+                id: "PROG-" + Date.now(),
+                name: document.getElementById('progName').value,
+                time: document.getElementById('progTime').value,
+                category: document.getElementById('progCat').value
+            });
+            closeAppModal();
+            showNotification('Program radio ditambahkan');
+            renderProgramListView();
+        }
+
+        function deleteProgram(id) {
+            radioPrograms = radioPrograms.filter(p => p.id !== id);
+            showNotification('Program dihapus');
+            renderProgramListView();
+        }
+
+        function triggerPrintModal(htmlBody) {
+            document.getElementById('kopStationName').innerText = kopSuratConfig.stationName;
+            document.getElementById('kopStationAddress').innerText = kopSuratConfig.address;
+            document.getElementById('kopCityDate').innerText = `${kopSuratConfig.city}, 27 Juli 2026`;
+            document.getElementById('kopTitle').innerText = `Mengetahui, ${kopSuratConfig.signeeTitle}`;
+            document.getElementById('kopSignee').innerText = kopSuratConfig.signeeName;
+            document.getElementById('printableContent').innerHTML = htmlBody;
+
+            const modal = document.getElementById('printModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closePrintModal() {
+            const modal = document.getElementById('printModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function openAppModal(title, bodyHtml) {
+            document.getElementById('appModalTitle').innerText = title;
+            document.getElementById('appModalBody').innerHTML = bodyHtml;
+            const modal = document.getElementById('appModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeAppModal() {
+            const modal = document.getElementById('appModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function showNotification(message, type = 'success') {
+            const notif = document.createElement('div');
+            notif.className = `fixed bottom-5 right-5 z-50 px-5 py-3 rounded-2xl shadow-2xl text-xs font-semibold text-white animate-bounce ${type === 'error' ? 'bg-rose-600' : 'bg-indigo-600'}`;
+            notif.innerHTML = `<i class="fa-solid fa-circle-info mr-2"></i> ${message}`;
+            document.body.appendChild(notif);
+            setTimeout(() => { notif.remove(); }, 3000);
+        }
+    </script>
+</body>
+
+</html>
+
+
+
+
