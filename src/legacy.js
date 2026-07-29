@@ -10,7 +10,8 @@
             city: "Kota JCC",
             signeeTitle: "Station Manager & Penanggung Jawab",
             signeeName: "H. Irwan Setiawan, M.I.Kom",
-            docTemplateHeader: "SURAT KETERANGAN RESMI & REKAPITULASI PENYIARAN"
+            docTemplateHeader: "SURAT KETERANGAN RESMI & REKAPITULASI PENYIARAN",
+            ttdImage: null
         };
 
         // Dummy Master Data Penyiar
@@ -1333,10 +1334,26 @@ let adminData = {
         }
 
         function openCreateAgendaModal() {
-            let penyiarOptions = '<option value="ALL">Semua Penyiar (Global)</option>';
-            penyiars.forEach(p => {
-                penyiarOptions += `<option value="${p.id}">${p.name}</option>`;
-            });
+            const isPenyiar = currentUser && currentUser.role === 'penyiar';
+
+            let recipientField;
+            if (isPenyiar) {
+                // Penyiar hanya bisa kirim ke Admin
+                recipientField = `
+                    <select id="agTarget" required class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white opacity-70 cursor-not-allowed" disabled>
+                        <option value="ADMIN" selected>Admin</option>
+                    </select>
+                    <input type="hidden" id="agTargetHidden" value="ADMIN">`;
+            } else {
+                let penyiarOptions = '<option value="ALL">Semua Penyiar (Global)</option>';
+                penyiars.forEach(p => {
+                    penyiarOptions += `<option value="${p.id}">${p.name}</option>`;
+                });
+                recipientField = `
+                    <select id="agTarget" required class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                        ${penyiarOptions}
+                    </select>`;
+            }
 
             const body = `
                 <form onsubmit="saveNewAgenda(event)" class="space-y-4 text-sm">
@@ -1346,9 +1363,7 @@ let adminData = {
                     </div>
                     <div>
                         <label class="block font-semibold text-slate-300 mb-1">Ditujukan Kepada</label>
-                        <select id="agTarget" required class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
-                            ${penyiarOptions}
-                        </select>
+                        ${recipientField}
                     </div>
                     <div>
                         <label class="block font-semibold text-slate-300 mb-1">Isi Detail / Catatan</label>
@@ -1385,7 +1400,7 @@ let adminData = {
             agendas.push({
                 id: 'ag-' + Date.now(),
                 title: document.getElementById('agTitle').value,
-                target: document.getElementById('agTarget').value,
+                target: (document.getElementById('agTargetHidden') || document.getElementById('agTarget')).value,
                 description: document.getElementById('agDesc').value,
                 link: document.getElementById('agLink').value,
                 date: document.getElementById('agDate').value,
@@ -2344,8 +2359,8 @@ function exportAdminGlobalPDF() {
 
           
         function printRekapanCuti() {
-            const bulan = document.getElementById('filterBulanCuti').value; // format YYYY-MM
-            const penyiarId = document.getElementById('filterPenyiarCuti').value;
+            const bulan = (document.getElementById('filterBulanCuti') || { value: '' }).value; // format YYYY-MM
+            const penyiarId = (document.getElementById('filterPenyiarCuti') || { value: 'all' }).value;
 
             let filteredLeaves = leaveRequests;
             
@@ -2359,7 +2374,7 @@ function exportAdminGlobalPDF() {
             }
 
             if (penyiarId !== 'all') {
-                const penyiar = penyiarData.find(p => p.id === penyiarId);
+                const penyiar = penyiars.find(p => p.id === penyiarId);
                 filterText += ` | Penyiar: ${penyiar ? penyiar.name : 'Unknown'}`;
                 filteredLeaves = filteredLeaves.filter(l => l.penyiarId === penyiarId);
             } else {
@@ -2453,10 +2468,10 @@ ${l.status === 'ACC' ? `<div class="mt-3"><button onclick="printSuratIzin('${l.i
                                 <p class="text-xs text-slate-400">Review dan berikan persetujuan (ACC) atau penolakan surat cuti.</p>
                             </div>
                             <div class="flex flex-wrap items-center gap-2 bg-slate-900/50 p-2 rounded-xl border border-slate-700/50">
-                                <input type="month" id="filterBulanCuti" class="bg-slate-950 border border-slate-800 text-slate-300 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-indigo-500">
+
                                 <select id="filterPenyiarCuti" class="bg-slate-950 border border-slate-800 text-slate-300 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-indigo-500 max-w-[150px]">
                                     <option value="all">Semua Penyiar</option>
-                                    ${penyiarData.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+                                    ${penyiars.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
                                 </select>
                                 <button onclick="printRekapanCuti()" class="bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg px-3 py-1.5 text-xs font-bold shadow-md transition-colors flex items-center gap-1.5">
                                     <i class="fa-solid fa-print"></i> Cetak Rekapan
@@ -2855,6 +2870,39 @@ function openAddLeaveModal() {
                                 <input type="text" id="cfgSigneeName" required value="${kopSuratConfig.signeeName}" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-white">
                             </div>
 
+                            <!-- TTD UPLOAD SECTION -->
+                            <div class="border border-slate-700 rounded-2xl p-4 bg-slate-900/60 space-y-3">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <i class="fa-solid fa-signature text-indigo-400"></i>
+                                    <label class="font-semibold text-slate-200 text-xs">Upload Gambar Tanda Tangan (TTD)</label>
+                                </div>
+                                <p class="text-[11px] text-slate-500">Upload gambar TTD (PNG transparan direkomendasikan). Gambar akan otomatis muncul di semua dokumen PDF yang dicetak.</p>
+                                
+                                <!-- Preview area -->
+                                <div id="ttdPreviewWrap" class="flex items-center gap-4">
+                                    ${kopSuratConfig.ttdImage
+                                        ? `<div class="relative">
+                                            <img id="ttdPreviewImg" src="${kopSuratConfig.ttdImage}" class="h-16 object-contain border border-slate-600 rounded-xl bg-white/5 px-2" alt="TTD Preview">
+                                           </div>
+                                           <span class="text-emerald-400 text-[11px] font-semibold flex items-center gap-1"><i class="fa-solid fa-circle-check"></i> TTD sudah diset</span>`
+                                        : `<div class="w-32 h-16 border border-dashed border-slate-600 rounded-xl flex items-center justify-center text-slate-500 text-[10px]">Belum ada TTD</div>`
+                                    }
+                                </div>
+                                
+                                <div class="flex flex-wrap gap-2">
+                                    <label for="cfgTtdUpload" class="cursor-pointer flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold rounded-xl transition-colors">
+                                        <i class="fa-solid fa-upload"></i> ${kopSuratConfig.ttdImage ? 'Ganti Gambar TTD' : 'Upload Gambar TTD'}
+                                    </label>
+                                    <input type="file" id="cfgTtdUpload" accept="image/*" class="hidden" onchange="previewTtdUpload(event)">
+                                    ${kopSuratConfig.ttdImage
+                                        ? `<button type="button" onclick="removeTtdImage()" class="flex items-center gap-2 px-4 py-2 bg-rose-600/80 hover:bg-rose-500 text-white text-[11px] font-bold rounded-xl transition-colors">
+                                            <i class="fa-solid fa-trash"></i> Hapus TTD
+                                           </button>`
+                                        : ''
+                                    }
+                                </div>
+                            </div>
+
                             <button type="submit" class="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl mt-4">
                                 Simpan Konfigurasi Kop & Template
                             </button>
@@ -2872,9 +2920,37 @@ function openAddLeaveModal() {
             kopSuratConfig.city = document.getElementById('cfgCity').value;
             kopSuratConfig.signeeTitle = document.getElementById('cfgSigneeTitle').value;
             kopSuratConfig.signeeName = document.getElementById('cfgSigneeName').value;
-
+            // ttdImage already saved live via previewTtdUpload()
             showNotification('Konfigurasi KOP & template surat berhasil diperbarui!');
         }
+
+        function previewTtdUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                kopSuratConfig.ttdImage = e.target.result;
+                // update preview without full re-render
+                const wrap = document.getElementById('ttdPreviewWrap');
+                if (wrap) {
+                    wrap.innerHTML = `
+                        <div class="relative">
+                            <img id="ttdPreviewImg" src="${e.target.result}" class="h-16 object-contain border border-slate-600 rounded-xl bg-white/5 px-2" alt="TTD Preview">
+                        </div>
+                        <span class="text-emerald-400 text-[11px] font-semibold flex items-center gap-1"><i class="fa-solid fa-circle-check"></i> TTD berhasil diupload</span>`;
+                }
+                showNotification('Gambar TTD berhasil diupload!');
+            };
+            reader.readAsDataURL(file);
+        }
+        window.previewTtdUpload = previewTtdUpload;
+
+        function removeTtdImage() {
+            kopSuratConfig.ttdImage = null;
+            renderAdminSettingsView();
+            showNotification('Gambar TTD dihapus.');
+        }
+        window.removeTtdImage = removeTtdImage;
 
         /* ==========================================================================
            PROGRAM LIST & MODAL HELPERS
@@ -2970,6 +3046,16 @@ function openAddLeaveModal() {
             document.getElementById('kopTitle').innerText = `Mengetahui, ${kopSuratConfig.signeeTitle}`;
             document.getElementById('kopSignee').innerText = kopSuratConfig.signeeName;
             document.getElementById('printableContent').innerHTML = htmlBody;
+
+            // Render TTD image in signature area
+            const ttdArea = document.getElementById('kopTtdArea');
+            if (ttdArea) {
+                if (kopSuratConfig.ttdImage) {
+                    ttdArea.innerHTML = `<img src="${kopSuratConfig.ttdImage}" style="height:60px;max-width:150px;object-fit:contain;display:block;margin:auto;" alt="TTD">`;
+                } else {
+                    ttdArea.innerHTML = '';
+                }
+            }
 
             const modal = document.getElementById('printModal');
             modal.classList.remove('hidden');
