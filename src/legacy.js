@@ -1662,12 +1662,14 @@ let adminData = {
 
                     <div class="flex justify-between text-sm pt-4 text-black">
                         <div class="text-center w-1/3">
-                            <p class="mb-16">Penerima Tugas,</p>
+                            <p>Penerima Tugas,</p>
+                            <div class="h-16 my-1"></div>
                             <p class="font-bold underline">( Staff Penyiar )</p>
                         </div>
                         <div class="text-center w-1/3">
-                            <p class="mb-16">Kota JCC, ${new Date().toLocaleDateString('id-ID')}<br>Station Manager,</p>
-                            <p class="font-bold underline">H. Management Radio</p>
+                            <p>${kopSuratConfig.city || 'Kota JCC'}, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}<br>${kopSuratConfig.signeeTitle || 'Station Manager'}</p>
+                            ${kopSuratConfig.ttdImage ? `<div class="h-16 my-1 flex items-center justify-center"><img src="${kopSuratConfig.ttdImage}" style="height:60px;max-width:150px;object-fit:contain;display:block;margin:auto;" alt="TTD"></div>` : `<div class="h-16 my-1"></div>`}
+                            <p class="font-bold underline">${kopSuratConfig.signeeName || 'H. Management Radio'}</p>
                         </div>
                     </div>
                 </div>
@@ -3102,7 +3104,7 @@ function openAddLeaveModal() {
         function triggerPrintModal(htmlBody, penyiarName = null) {
             document.getElementById('kopStationName').innerText = kopSuratConfig.stationName;
             document.getElementById('kopStationAddress').innerText = kopSuratConfig.address;
-            document.getElementById('kopCityDate').innerText = `${kopSuratConfig.city}, 27 Juli 2026`;
+            document.getElementById('kopCityDate').innerText = `${kopSuratConfig.city}, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`;
             document.getElementById('kopTitle').innerText = `${kopSuratConfig.signeeTitle}`;
             document.getElementById('kopSignee').innerText = kopSuratConfig.signeeName;
             document.getElementById('printableContent').innerHTML = htmlBody;
