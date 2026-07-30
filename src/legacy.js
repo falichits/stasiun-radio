@@ -650,17 +650,40 @@ let adminData = {
             renderPenyiarDashboard();
         }
 
+        let penyiarChartInstance = null;
+
         function initPenyiarChart(myLogs) {
             const ctx = document.getElementById('penyiarChart');
             if (!ctx) return;
 
-            new Chart(ctx, {
+            const now = new Date();
+            const dayOfWeek = now.getDay();
+            const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+            const monday = new Date(now);
+            monday.setDate(now.getDate() + mondayOffset);
+            monday.setHours(0, 0, 0, 0);
+
+            const hoursPerDay = [0, 0, 0, 0, 0, 0, 0];
+            myLogs.forEach(log => {
+                const logDate = new Date(log.date + 'T00:00:00');
+                const diffDays = Math.round((logDate - monday) / (1000 * 60 * 60 * 24));
+                if (diffDays >= 0 && diffDays <= 6) {
+                    hoursPerDay[diffDays] += 2;
+                }
+            });
+
+            if (penyiarChartInstance) {
+                penyiarChartInstance.destroy();
+                penyiarChartInstance = null;
+            }
+
+            penyiarChartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'],
                     datasets: [{
                         label: 'Jam On-Air',
-                        data: [2, 4, 2, 2, 4, 2, 0],
+                        data: hoursPerDay,
                         backgroundColor: 'rgba(99, 102, 241, 0.6)',
                         borderColor: '#6366f1',
                         borderWidth: 2,
@@ -672,7 +695,7 @@ let adminData = {
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: {
-                        y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                        y: { ticks: { color: '#94a3b8', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.05)' } },
                         x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
                     }
                 }
@@ -1811,44 +1834,81 @@ let adminData = {
                                         </tr>
                                     </thead>
                                     <tbody id="adminRekapanTableBody" class="divide-y divide-slate-800/60">
-                                        ${attendanceLogs.map(l => `
-                                            <tr class="hover:bg-slate-800/30">
-                                                <td class="p-4 font-bold text-white">${l.penyiarName}</td>
-                                                <td class="p-4 text-indigo-300">${l.programName}</td>
-                                                <td class="p-4 font-mono text-slate-400">${l.date}</td>
-                                                <td class="p-4 font-mono text-xs">${l.checkIn} - ${l.checkOut}</td>
-                                                <td class="p-4"><span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold text-[10px]">${l.status}</span></td>
-                                            </tr>
-                                        `).join('')}
                                     </tbody>
                                 </table>
+                            </div>
+                            <div id="adminRekapanPagination" class="p-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-800 bg-slate-900/50">
                             </div>
                         </div>
                     </div>
                 `;
+                setTimeout(() => filterAdminRekapan(1), 0);
             }
         }
 
-        function filterAdminRekapan() {
-            const val = document.getElementById('adminRekapanFilterSelect').value;
+        let adminRekapanCurrentPage = 1;
+        function filterAdminRekapan(page = null) {
+            const selectEl = document.getElementById('adminRekapanFilterSelect');
+            if (!selectEl) return;
+            const val = selectEl.value;
             const tbody = document.getElementById('adminRekapanTableBody');
+            const paginationContainer = document.getElementById('adminRekapanPagination');
+
+            if (page !== null) {
+                adminRekapanCurrentPage = page;
+            } else {
+                adminRekapanCurrentPage = 1;
+            }
 
             let filtered = attendanceLogs;
             if (val !== 'GLOBAL') {
                 filtered = attendanceLogs.filter(l => l.penyiarId === val);
             }
 
-            tbody.innerHTML = filtered.map(l => `
-                <tr class="hover:bg-slate-800/30">
-                    <td class="p-4 font-bold text-white">${l.penyiarName}</td>
-                    <td class="p-4 text-indigo-300">${l.programName}</td>
-                    <td class="p-4 font-mono text-slate-400">${l.date}</td>
-                    <td class="p-4 font-mono text-xs">${l.checkIn} - ${l.checkOut}</td>
-                    <td class="p-4"><span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold text-[10px]">${l.status}</span></td>
-                </tr>
-            `).join('') || `<tr><td colspan="5" class="p-6 text-center text-slate-500 italic">Tidak ada rekapan untuk penyiar ini.</td></tr>`;
-        }
+            const itemsPerPage = 10;
+            const totalItems = filtered.length;
+            const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+            
+            if (adminRekapanCurrentPage < 1) adminRekapanCurrentPage = 1;
+            if (adminRekapanCurrentPage > totalPages) adminRekapanCurrentPage = totalPages;
 
+            const startIndex = (adminRekapanCurrentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const paginatedData = filtered.slice(startIndex, endIndex);
+
+            if (tbody) {
+                tbody.innerHTML = paginatedData.map(l => `
+                    <tr class="hover:bg-slate-800/30">
+                        <td class="p-4 font-bold text-white">${l.penyiarName}</td>
+                        <td class="p-4 text-indigo-300">${l.programName}</td>
+                        <td class="p-4 font-mono text-slate-400">${l.date}</td>
+                        <td class="p-4 font-mono text-xs">${l.checkIn} - ${l.checkOut}</td>
+                        <td class="p-4"><span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold text-[10px]">${l.status}</span></td>
+                    </tr>
+                `).join('') || `<tr><td colspan="5" class="p-6 text-center text-slate-500 italic">Tidak ada rekapan untuk penyiar ini.</td></tr>`;
+            }
+
+            if (paginationContainer) {
+                paginationContainer.innerHTML = `
+                    <div class="text-xs text-slate-400">
+                        Menampilkan <span class="font-bold text-white">${totalItems === 0 ? 0 : startIndex + 1}</span> 
+                        sampai <span class="font-bold text-white">${Math.min(endIndex, totalItems)}</span> 
+                        dari <span class="font-bold text-white">${totalItems}</span> data
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="filterAdminRekapan(${adminRekapanCurrentPage - 1})" ${adminRekapanCurrentPage === 1 ? 'disabled' : ''} class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold transition-colors">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+                        <div class="text-xs font-bold text-slate-300 px-3">
+                            Halaman ${adminRekapanCurrentPage} / ${totalPages}
+                        </div>
+                        <button onclick="filterAdminRekapan(${adminRekapanCurrentPage + 1})" ${adminRekapanCurrentPage === totalPages ? 'disabled' : ''} class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold transition-colors">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                `;
+            }
+        }
         function downloadSelectedRekapanPDF() {
             const val = document.getElementById('adminRekapanFilterSelect').value;
             if (val === 'GLOBAL') {
@@ -1900,7 +1960,7 @@ let adminData = {
                     </table>
                 </div>
             `;
-            triggerPrintModal(htmlContent);
+            triggerPrintModal(htmlContent, p.name);
         }
 
                 function exportAdminPersonalPDF(penyiarId) {
@@ -1946,7 +2006,7 @@ let adminData = {
                     </table>
                 </div>
             `;
-            triggerPrintModal(htmlContent);
+            triggerPrintModal(htmlContent, p.name);
         }
 
 function exportAdminGlobalPDF() {
@@ -3039,11 +3099,11 @@ function openAddLeaveModal() {
             renderProgramListView();
         }
 
-        function triggerPrintModal(htmlBody) {
+        function triggerPrintModal(htmlBody, penyiarName = null) {
             document.getElementById('kopStationName').innerText = kopSuratConfig.stationName;
             document.getElementById('kopStationAddress').innerText = kopSuratConfig.address;
             document.getElementById('kopCityDate').innerText = `${kopSuratConfig.city}, 27 Juli 2026`;
-            document.getElementById('kopTitle').innerText = `Mengetahui, ${kopSuratConfig.signeeTitle}`;
+            document.getElementById('kopTitle').innerText = `${kopSuratConfig.signeeTitle}`;
             document.getElementById('kopSignee').innerText = kopSuratConfig.signeeName;
             document.getElementById('printableContent').innerHTML = htmlBody;
 
@@ -3057,6 +3117,28 @@ function openAddLeaveModal() {
                 }
             }
 
+            const leftArea = document.getElementById('kopSignatureLeft');
+            if (leftArea) {
+                if (penyiarName) {
+                    leftArea.innerHTML = `
+                        <div class="text-center min-w-[200px]">
+                            <p class="text-slate-600 mb-1">Mengetahui,</p>
+                            <p class="font-bold text-slate-900">Penyiar</p>
+                            <div class="h-16 my-1"></div>
+                            <p class="font-bold text-slate-900 underline">${penyiarName}</p>
+                        </div>
+                    `;
+                } else {
+                    leftArea.innerHTML = `
+                        <div class="text-center min-w-[200px]">
+                            <p class="text-slate-600 mb-1">Mengetahui,</p>
+                            <div class="h-16 my-1"></div>
+                        </div>
+                        <p class="text-slate-500 text-left">Dokumen ini diterbitkan secara elektronik oleh Portal Resmi JCCFM.</p>
+                        <p class="text-[10px] text-slate-400 mt-1 text-left">Verified Security Token: JCC-PDF-AUTH-2026</p>
+                    `;
+                }
+            }
             const modal = document.getElementById('printModal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
