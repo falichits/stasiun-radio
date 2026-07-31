@@ -72,8 +72,33 @@ let adminData = {
 
         window.onload = function () {
             startClock();
-            renderLoginView();
+            handleRouting();
         };
+
+        function handleRouting() {
+            let hash = window.location.hash.slice(1);
+            try {
+                hash = hash ? atob(hash) : '';
+            } catch (e) {
+                hash = '';
+            }
+
+            if (!currentUser) {
+                if (hash && hash !== 'login') {
+                    window.location.hash = btoa('login');
+                } else {
+                    renderLoginView();
+                }
+            } else {
+                if (!hash || hash === 'login') {
+                    window.location.hash = btoa(currentUser.role === 'admin' ? 'adminDashboard' : 'penyiarDashboard');
+                } else {
+                    applyView(hash);
+                }
+            }
+        }
+
+        window.addEventListener('hashchange', handleRouting);
 
         function startClock() {
             setInterval(() => {
@@ -294,6 +319,12 @@ let adminData = {
         }
 
         function switchView(viewName) {
+            window.location.hash = btoa(viewName);
+        }
+
+        function applyView(viewName) {
+            if (!currentUser) return; // Prevent viewing if logged out
+            
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 if (btn.dataset.view === viewName) {
                     btn.classList.add('bg-indigo-600', 'text-white', 'shadow-md', 'shadow-indigo-600/30');
@@ -353,7 +384,7 @@ let adminData = {
         function logout() {
             currentUser = null;
             if (checkoutTimerInterval) clearInterval(checkoutTimerInterval);
-            renderLoginView();
+            window.location.hash = btoa('login');
             showNotification('Anda telah keluar dari akun');
         }
 
@@ -1168,7 +1199,7 @@ let adminData = {
 
             closeAppModal();
             showNotification('Data penyiar diperbarui');
-            renderPenyiarManagementView();
+            renderAdminPenyiarMaster();
         }
         window.saveEditedPenyiar = saveEditedPenyiar;
 
