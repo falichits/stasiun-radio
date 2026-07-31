@@ -56,6 +56,11 @@
                 padding-top: 0 !important;
             }
         }
+        
+        /* Make date/month/time input icons white on dark background */
+        ::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+        }
     </style>
 </head>
 
@@ -245,7 +250,7 @@
                     <div class="text-center min-w-[200px]">
                         <p id="kopCityDate" class="text-slate-600 mb-1">Kota JCC, <span id="signatureCurrentDate">27
                                 Juli 2026</span></p>
-                        <p id="kopTitle" class="font-bold text-slate-900">Mengetahui, Station Manager</p>
+                        <p id="kopTitle" class="font-bold text-slate-900">Station Manager</p>
                         <div id="kopTtdArea" class="h-16 my-1 flex items-center justify-center"></div>
                         <p id="kopSignee" class="font-bold text-slate-900 underline">Budi Santoso, M.Si</p>
                     </div>

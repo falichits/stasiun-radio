@@ -1001,6 +1001,9 @@ let adminData = {
                                                     <button onclick="openCVExportModal('${p.id}')" title="Export CV / Surat" class="p-2 bg-indigo-600/20 text-indigo-300 hover:bg-indigo-600 hover:text-white rounded-lg transition-all">
                                                         <i class="fa-solid fa-file-pdf"></i>
                                                     </button>
+                                                    <button onclick="openEditPenyiarModal('${p.id}')" title="Edit Penyiar" class="p-2 bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600 hover:text-white rounded-lg transition-all">
+                                                        <i class="fa-solid fa-pen"></i>
+                                                    </button>
                                                     <button onclick="deletePenyiar('${p.id}')" title="Hapus Penyiar" class="p-2 bg-rose-600/20 text-rose-300 hover:bg-rose-600 hover:text-white rounded-lg transition-all">
                                                         <i class="fa-solid fa-trash"></i>
                                                     </button>
@@ -1076,6 +1079,98 @@ let adminData = {
             `;
             openAppModal('Tambah Penyiar Baru', body);
         }
+
+        function openEditPenyiarModal(id) {
+            const p = penyiars.find(x => x.id === id);
+            if (!p) return;
+            const body = `
+                <form onsubmit="saveEditedPenyiar(event, '${id}')" class="space-y-3 text-xs">
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">ID Penyiar</label>
+                        <input type="text" id="editPenId" readonly value="${p.id}" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-2.5 text-slate-400 cursor-not-allowed">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Nama Lengkap</label>
+                        <input type="text" id="editPenName" required value="${p.name}" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block font-semibold text-slate-300 mb-1">Kategori/Tipe Penyiar</label>
+                            <select id="editPenCategory" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                                ${broadcasterCategories.map(c => `<option value="${c}" ${c === p.category ? 'selected' : ''}>${c}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-300 mb-1">Jenis Kelamin</label>
+                            <select id="editPenGender" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                                <option value="Laki-laki" ${p.gender === 'Laki-laki' ? 'selected' : ''}>Laki-laki</option>
+                                <option value="Perempuan" ${p.gender === 'Perempuan' ? 'selected' : ''}>Perempuan</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block font-semibold text-slate-300 mb-1">Email Akses Login</label>
+                            <input type="email" id="editPenEmail" required value="${p.email}" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-300 mb-1">Password</label>
+                            <input type="text" id="editPenPass" required value="${p.password}" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">No. HP / WA Aktif</label>
+                        <input type="text" id="editPenPhone" required value="${p.phone}" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Alamat Rumah</label>
+                        <input type="text" id="editPenAddress" required value="${p.address}" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Tanggal Bergabung</label>
+                        <input type="date" id="editPenJoinDate" required value="${p.joinDate}" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-white [color-scheme:dark]">
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl mt-4">
+                        Simpan Perubahan
+                    </button>
+                </form>
+            `;
+            openAppModal('Edit Data Penyiar', body);
+        }
+
+        window.openEditPenyiarModal = openEditPenyiarModal;
+
+        function saveEditedPenyiar(e, id) {
+            e.preventDefault();
+            
+            const p = penyiars.find(x => x.id === id);
+            if (!p) return;
+
+            const oldName = p.name;
+            const newName = document.getElementById('editPenName').value;
+
+            p.name = newName;
+            p.category = document.getElementById('editPenCategory').value;
+            p.email = document.getElementById('editPenEmail').value;
+            p.password = document.getElementById('editPenPass').value;
+            p.address = document.getElementById('editPenAddress').value;
+            p.phone = document.getElementById('editPenPhone').value;
+            p.joinDate = document.getElementById('editPenJoinDate').value;
+            p.gender = document.getElementById('editPenGender').value;
+
+            if (oldName !== newName) {
+                if (p.photo.includes('ui-avatars')) {
+                    p.photo = 'https://ui-avatars.com/api/?background=random&color=fff&name=' + encodeURIComponent(newName);
+                }
+                attendanceLogs.forEach(l => { if (l.penyiarId === id) l.penyiarName = newName; });
+                leaveRequests.forEach(l => { if (l.penyiarId === id) l.penyiarName = newName; });
+            }
+
+            closeAppModal();
+            showNotification('Data penyiar diperbarui');
+            renderPenyiarManagementView();
+        }
+        window.saveEditedPenyiar = saveEditedPenyiar;
 
         function saveNewPenyiar(e) {
             e.preventDefault();
@@ -1163,11 +1258,30 @@ let adminData = {
            4. AGENDA / DISPOSISI AGENDA MODULE WITH DEADLINE REMINDER
            ========================================================================== */
 
+        let agendaMonthFilter = '';
+        window.setAgendaMonthFilter = function(val) {
+            agendaMonthFilter = val;
+            renderAgendaView();
+        }
+
         
         function renderAgendaView() {
             const container = document.getElementById('viewContainer');
             
             let agendaHtml = '';
+
+            const filteredAgendas = agendaMonthFilter ? agendas.filter(a => (a.dateMasuk && a.dateMasuk.startsWith(agendaMonthFilter)) || (a.date && a.date.startsWith(agendaMonthFilter))) : agendas;
+            const filteredSuratTugas = agendaMonthFilter ? suratTugas.filter(st => st.dateMasuk && st.dateMasuk.startsWith(agendaMonthFilter)) : suratTugas;
+
+            // Filter Bar
+            agendaHtml += `
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl mb-4 flex items-center gap-3">
+                    <label class="text-xs text-slate-300 font-bold"><i class="fa-solid fa-filter text-indigo-400 mr-1"></i> Filter Periode:</label>
+                    <input type="month" value="${agendaMonthFilter}" onchange="setAgendaMonthFilter(this.value)" class="bg-slate-950 border border-slate-700 rounded px-3 py-1.5 text-xs text-white">
+                    <button onclick="setAgendaMonthFilter('')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded text-xs transition">Reset</button>
+                </div>
+            `;
+
             // Table Agenda (Global)
             agendaHtml += `
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl mb-6">
@@ -1193,8 +1307,8 @@ let adminData = {
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-800/60">
-                                ${agendas.length === 0 ? '<tr><td colspan="6" class="p-4 text-center text-slate-500">Belum ada agenda.</td></tr>' : ''}
-                                ${agendas.map((a, idx) => `
+                                ${filteredAgendas.length === 0 ? '<tr><td colspan="6" class="p-4 text-center text-slate-500">Belum ada agenda.</td></tr>' : ''}
+                                ${filteredAgendas.map((a, idx) => `
                                     <tr class="hover:bg-slate-800/30">
                                         <td class="p-3">${idx + 1}</td>
                                         <td class="p-3">
@@ -1250,8 +1364,8 @@ let adminData = {
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-800/60">
-                                    ${suratTugas.length === 0 ? '<tr><td colspan="5" class="p-4 text-center text-slate-500">Belum ada surat tugas.</td></tr>' : ''}
-                                    ${suratTugas.map(st => `
+                                    ${filteredSuratTugas.length === 0 ? '<tr><td colspan="5" class="p-4 text-center text-slate-500">Belum ada surat tugas.</td></tr>' : ''}
+                                    ${filteredSuratTugas.map(st => `
                                         <tr class="hover:bg-slate-800/30">
                                             <td class="p-3">
                                                 <div class="font-bold text-white">${st.kategori}</div>
@@ -1268,6 +1382,9 @@ let adminData = {
                                             <td class="p-3 text-center space-y-2">
                                                 <button onclick="previewPDFSuratTugas('${st.id}')" class="w-full text-slate-300 hover:text-white bg-slate-800 px-2 py-1.5 rounded text-[10px] font-bold">
                                                     <i class="fa-solid fa-file-pdf text-rose-400 mr-1"></i> Preview PDF
+                                                </button>
+                                                <button onclick="deleteSuratTugas('${st.id}')" class="w-full text-rose-300 hover:text-white bg-rose-900/50 px-2 py-1.5 rounded text-[10px] font-bold mt-1">
+                                                    <i class="fa-solid fa-trash mr-1"></i> Hapus
                                                 </button>
                                                 ${st.status === 'Laporan Terkirim' ? `
                                                     <button onclick="accSuratTugas('${st.id}')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-1.5 rounded text-[10px] font-bold">
@@ -1292,7 +1409,7 @@ let adminData = {
                     </div>
                 `;
             } else {
-                const myTugas = suratTugas.filter(st => st.target === 'ALL' || st.target === currentUser.data.id);
+                const myTugas = filteredSuratTugas.filter(st => st.target === 'ALL' || st.target === currentUser.data.id);
                 suratTugasHtml = `
                     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
                         <h3 class="text-xl font-bold text-white mb-1"><i class="fa-solid fa-tasks text-rose-400 mr-2"></i> Surat Tugas Anda</h3>
@@ -1322,13 +1439,22 @@ let adminData = {
                                                 <button onclick="openBandingModal('${st.id}')" class="flex-1 bg-amber-600 hover:bg-amber-500 text-white py-1.5 rounded text-[10px] font-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Banding</button>
                                             </div>
                                         ` : st.status === 'Diterima' ? `
-                                            <button onclick="openLaporanTugasModal('${st.id}')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded text-xs font-bold">Kirim Laporan Hasil</button>
+                                            <div class="flex flex-col gap-2">
+                                                <button onclick="openLaporanTugasModal('${st.id}')" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded text-xs font-bold">Kirim Laporan Hasil</button>
+                                                <button onclick="previewPDFSuratTugas('${st.id}')" class="w-full text-slate-300 hover:text-white bg-slate-800 px-2 py-1.5 rounded text-[10px] font-bold"><i class="fa-solid fa-file-pdf text-rose-400 mr-1"></i> Preview & Print PDF</button>
+                                            </div>
                                         ` : st.status === 'Banding' ? `
                                             <div class="text-[10px] text-amber-400 text-center bg-amber-900/20 py-1.5 rounded">Menunggu tanggapan admin atas banding Anda.</div>
                                         ` : st.status === 'Laporan Terkirim' ? `
-                                            <div class="text-[10px] text-indigo-400 text-center bg-indigo-900/20 py-1.5 rounded">Laporan terkirim. Menunggu ACC admin.</div>
+                                            <div class="flex flex-col gap-2">
+                                                <div class="text-[10px] text-indigo-400 text-center bg-indigo-900/20 py-1.5 rounded">Laporan terkirim. Menunggu ACC admin.</div>
+                                                <button onclick="previewPDFSuratTugas('${st.id}')" class="w-full text-slate-300 hover:text-white bg-slate-800 px-2 py-1.5 rounded text-[10px] font-bold"><i class="fa-solid fa-file-pdf text-rose-400 mr-1"></i> Preview & Print PDF</button>
+                                            </div>
                                         ` : `
-                                            <div class="text-[10px] text-emerald-400 text-center bg-emerald-900/20 py-1.5 rounded">Tugas telah diselesaikan (ACC).</div>
+                                            <div class="flex flex-col gap-2">
+                                                <div class="text-[10px] text-emerald-400 text-center bg-emerald-900/20 py-1.5 rounded">Tugas telah diselesaikan (ACC).</div>
+                                                <button onclick="previewPDFSuratTugas('${st.id}')" class="w-full text-slate-300 hover:text-white bg-slate-800 px-2 py-1.5 rounded text-[10px] font-bold"><i class="fa-solid fa-file-pdf text-rose-400 mr-1"></i> Preview & Print PDF</button>
+                                            </div>
                                         `}
                                     </div>
                                 </div>
@@ -1581,6 +1707,17 @@ let adminData = {
         }
 
         // Admin Actions
+        function deleteSuratTugas(id) {
+            if (confirm('Apakah Anda yakin ingin menghapus surat tugas ini?')) {
+                const idx = suratTugas.findIndex(x => x.id === id);
+                if(idx !== -1) {
+                    suratTugas.splice(idx, 1);
+                    showNotification('Surat tugas berhasil dihapus.');
+                    renderAgendaView();
+                }
+            }
+        }
+
         function accSuratTugas(id) {
             const st = suratTugas.find(x => x.id === id);
             if(st) {
@@ -1633,7 +1770,7 @@ let adminData = {
                     <table class="w-full text-sm mb-6 border-collapse text-black">
                         <tr>
                             <td class="w-48 font-bold py-1">Tanggal Surat</td>
-                            <td class="py-1">: ${st.dateMasuk || new Date().toISOString().split('T')[0]}</td>
+                            <td class="py-1">: ${new Date(st.dateMasuk || Date.now()).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
                         </tr>
                         <tr>
                             <td class="w-48 font-bold py-1">Penyiar / Pelaksana</td>
@@ -1661,15 +1798,12 @@ let adminData = {
                     <p class="text-sm mb-8 text-black">Demikian surat tugas ini dibuat untuk dilaksanakan dengan penuh rasa tanggung jawab.</p>
 
                     <div class="flex justify-between text-sm pt-4 text-black">
-                        <div class="text-center w-1/3">
-                            <p>Penerima Tugas,</p>
-                            <div class="h-16 my-1"></div>
-                            <p class="font-bold underline">( Staff Penyiar )</p>
-                        </div>
-                        <div class="text-center w-1/3">
-                            <p>${kopSuratConfig.city || 'Kota JCC'}, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}<br>${kopSuratConfig.signeeTitle || 'Station Manager'}</p>
-                            ${kopSuratConfig.ttdImage ? `<div class="h-16 my-1 flex items-center justify-center"><img src="${kopSuratConfig.ttdImage}" style="height:60px;max-width:150px;object-fit:contain;display:block;margin:auto;" alt="TTD"></div>` : `<div class="h-16 my-1"></div>`}
-                            <p class="font-bold underline">${kopSuratConfig.signeeName || 'H. Management Radio'}</p>
+                        <div class="text-center w-full flex justify-end">
+                            <div class="text-center min-w-[200px]">
+                                <p>${kopSuratConfig.city || 'Kota JCC'}, ${new Date(st.dateMasuk || Date.now()).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}<br>${kopSuratConfig.signeeTitle || 'Station Manager'}</p>
+                                ${kopSuratConfig.ttdImage ? `<div class="h-16 my-1 flex items-center justify-center"><img src="${kopSuratConfig.ttdImage}" style="height:60px;max-width:150px;object-fit:contain;display:block;margin:auto;" alt="TTD"></div>` : `<div class="h-16 my-1"></div>`}
+                                <p class="font-bold underline">${kopSuratConfig.signeeName || 'H. Management Radio'}</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1741,11 +1875,22 @@ let adminData = {
         
     
 
+        let rangkumanPenyiarMonthFilter = '';
+        window.setRangkumanPenyiarMonthFilter = function(val) {
+            rangkumanPenyiarMonthFilter = val;
+            renderRangkumanAbsensiView();
+        }
+
         function renderRangkumanAbsensiView() {
             const container = document.getElementById('viewContainer');
 
             if (currentUser.role === 'penyiar') {
-                const myLogs = attendanceLogs.filter(l => l.penyiarId === currentUser.data.id);
+                let myLogs = attendanceLogs.filter(l => l.penyiarId === currentUser.data.id);
+                if (rangkumanPenyiarMonthFilter) {
+                    myLogs = myLogs.filter(l => l.date && l.date.startsWith(rangkumanPenyiarMonthFilter));
+                }
+
+                let periodTitle = rangkumanPenyiarMonthFilter ? `Laporan Kehadiran Periode Bulan ${new Date(rangkumanPenyiarMonthFilter + '-01').toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}` : `Laporan Kehadiran Periode Berjalan`;
 
                 container.innerHTML = `
                     <div class="space-y-6">
@@ -1754,14 +1899,18 @@ let adminData = {
                                 <h3 class="text-xl font-bold text-white">Rangkuman Absensi Penyiar</h3>
                                 <p class="text-xs text-slate-400">Total Jam Siaran Periode Bulanan & Export Laporan PDF Resmi.</p>
                             </div>
-                            <button onclick="exportPenyiarAttendancePDF()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center gap-2">
-                                <i class="fa-solid fa-file-pdf"></i> Preview & Export PDF Bulanan
-                            </button>
+                            <div class="flex items-center gap-2">
+                                <input type="month" value="${rangkumanPenyiarMonthFilter}" onchange="setRangkumanPenyiarMonthFilter(this.value)" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+                                <button onclick="setRangkumanPenyiarMonthFilter('')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition">Reset</button>
+                                <button onclick="exportPenyiarAttendancePDF()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/30 flex items-center gap-2">
+                                    <i class="fa-solid fa-file-pdf"></i> Preview & Export PDF Bulanan
+                                </button>
+                            </div>
                         </div>
 
                         <div class="glass-card rounded-2xl border border-slate-800 overflow-hidden">
                             <div class="p-4 border-b border-slate-800 flex justify-between items-center text-xs">
-                                <span class="font-bold text-white">Laporan Kehadiran Periode Juli 2026</span>
+                                <span class="font-bold text-white">${periodTitle}</span>
                                 <span class="text-slate-400">Total Jam: <strong class="text-indigo-400 font-bold">${myLogs.length * 2} Jam</strong></span>
                             </div>
                             <div class="overflow-x-auto">
@@ -1922,13 +2071,18 @@ let adminData = {
 
         function exportPenyiarAttendancePDF() {
             const p = currentUser.data;
-            const myLogs = attendanceLogs.filter(l => l.penyiarId === p.id);
+            let myLogs = attendanceLogs.filter(l => l.penyiarId === p.id);
+            if (rangkumanPenyiarMonthFilter) {
+                myLogs = myLogs.filter(l => l.date && l.date.startsWith(rangkumanPenyiarMonthFilter));
+            }
+            
+            let periodTitle = rangkumanPenyiarMonthFilter ? `Bulan ${new Date(rangkumanPenyiarMonthFilter + '-01').toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}` : `Bulan ${new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}`;
 
             const htmlContent = `
                 <div class="space-y-4 font-sans text-xs">
                     <div class="text-center border-b pb-2 mb-4">
                         <h3 class="text-base font-bold text-slate-900">REKAPITULASI SIARAN PENYIAR</h3>
-                        <p class="text-xs text-slate-600">Periode: Juli 2026</p>
+                        <p class="text-xs text-slate-600">Periode: ${periodTitle}</p>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4 bg-slate-100 p-3 rounded text-slate-800">
@@ -1974,7 +2128,7 @@ let adminData = {
                 <div class="space-y-4 font-sans text-xs">
                     <div class="text-center border-b pb-2 mb-4">
                         <h3 class="text-base font-bold text-slate-900">REKAPITULASI SIARAN PENYIAR</h3>
-                        <p class="text-xs text-slate-600">Periode: Bulan Berjalan</p>
+                        <p class="text-xs text-slate-600">Periode: Bulan ${new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}</p>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4 bg-slate-100 p-3 rounded text-slate-800">
@@ -2008,7 +2162,7 @@ let adminData = {
                     </table>
                 </div>
             `;
-            triggerPrintModal(htmlContent, p.name);
+            triggerPrintModal(htmlContent);
         }
 
 function exportAdminGlobalPDF() {
@@ -2016,7 +2170,7 @@ function exportAdminGlobalPDF() {
                 <div class="space-y-4 font-sans text-xs">
                     <div class="text-center border-b pb-2 mb-4">
                         <h3 class="text-base font-bold text-slate-900">REKAPITULASI SIARAN PENYIAR - GLOBAL</h3>
-                        <p class="text-xs text-slate-600">Periode Operasional: Bulan Juli 2026</p>
+                        <p class="text-xs text-slate-600">Periode Operasional: Bulan ${new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })}</p>
                     </div>
 
                     <table class="w-full border-collapse border border-slate-300 text-left">
@@ -2296,6 +2450,10 @@ function exportAdminGlobalPDF() {
 
         function deleteAchievement(achId) {
             if(confirm('Yakin ingin menghapus event ini?')) {
+                const achToDelete = achievements.find(a => a.id === achId);
+                if (achToDelete && typeof achievementBroadcasts !== 'undefined') {
+                    achievementBroadcasts = achievementBroadcasts.filter(b => !b.text.includes(achToDelete.title));
+                }
                 achievements = achievements.filter(a => a.id !== achId);
                 showNotification('Event dihapus');
                 renderAchievementView();
@@ -2484,11 +2642,35 @@ function exportAdminGlobalPDF() {
             triggerPrintModal(htmlContent);
         }
 
+        /* ==========================================================================
+           9. PENGELOLAAN CUTI / IJIN
+           ========================================================================== */
+
+        let cutiMonthFilter = '';
+        window.setCutiMonthFilter = function(val) {
+            cutiMonthFilter = val;
+            renderCutiView();
+        }
+
+        window.deleteCuti = function(id) {
+            if (confirm('Yakin ingin menghapus pengajuan ini?')) {
+                const idx = leaveRequests.findIndex(x => x.id === id);
+                if (idx !== -1) {
+                    leaveRequests.splice(idx, 1);
+                    showNotification('Pengajuan cuti/ijin berhasil dihapus.');
+                    renderCutiView();
+                }
+            }
+        }
+
           function renderCutiView() {
             const container = document.getElementById('viewContainer');
 
             if (currentUser.role === 'penyiar') {
-                const myLeaves = leaveRequests.filter(l => l.penyiarId === currentUser.data.id);
+                let myLeaves = leaveRequests.filter(l => l.penyiarId === currentUser.data.id);
+                if (cutiMonthFilter) {
+                    myLeaves = myLeaves.filter(l => l.startDate && l.startDate.startsWith(cutiMonthFilter));
+                }
 
                 container.innerHTML = `
                     <div class="space-y-6">
@@ -2497,9 +2679,13 @@ function exportAdminGlobalPDF() {
                                 <h3 class="text-xl font-bold text-white">Pengajuan Cuti / Ijin Penyiar</h3>
                                 <p class="text-xs text-slate-400">Ajukan surat cuti/ijin sebelum tenggat waktu yang ditentukan admin.</p>
                             </div>
-                            <button onclick="openAddLeaveModal()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg flex items-center gap-2">
-                                <i class="fa-solid fa-plus"></i> Ajukan Cuti Baru
-                            </button>
+                            <div class="flex items-center gap-2">
+                                <input type="month" value="${cutiMonthFilter}" onchange="setCutiMonthFilter(this.value)" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+                                <button onclick="setCutiMonthFilter('')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition">Reset</button>
+                                <button onclick="openAddLeaveModal()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg flex items-center gap-2">
+                                    <i class="fa-solid fa-plus"></i> Ajukan Cuti Baru
+                                </button>
+                            </div>
                         </div>
 
                         <div class="space-y-4">
@@ -2516,12 +2702,20 @@ function exportAdminGlobalPDF() {
                                         ${l.adminNotes ? `<div class="text-indigo-300 italic mt-1">Catatan Admin: ${l.adminNotes}</div>` : ''}
 ${l.status === 'ACC' ? `<div class="mt-3"><button onclick="printSuratIzin('${l.id}')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-bold shadow flex items-center gap-2"><i class="fa-solid fa-print"></i> Cetak Surat Izin</button></div>` : ''}
                                     </div>
+                                    <div class="flex items-center">
+                                        <button onclick="deleteCuti('${l.id}')" class="px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold shadow-md"><i class="fa-solid fa-trash mr-1"></i> Hapus</button>
+                                    </div>
                                 </div>
                             `).join('') || '<p class="text-xs text-slate-500 italic">Belum ada riwayat pengajuan cuti.</p>'}
                         </div>
                     </div>
                 `;
             } else {
+                let filteredLeaves = leaveRequests;
+                if (cutiMonthFilter) {
+                    filteredLeaves = filteredLeaves.filter(l => l.startDate && l.startDate.startsWith(cutiMonthFilter));
+                }
+
                 container.innerHTML = `
                     <div class="space-y-6">
                         <div class="flex flex-col md:flex-row justify-between md:items-center gap-4">
@@ -2530,6 +2724,8 @@ ${l.status === 'ACC' ? `<div class="mt-3"><button onclick="printSuratIzin('${l.i
                                 <p class="text-xs text-slate-400">Review dan berikan persetujuan (ACC) atau penolakan surat cuti.</p>
                             </div>
                             <div class="flex flex-wrap items-center gap-2 bg-slate-900/50 p-2 rounded-xl border border-slate-700/50">
+                                <input type="month" value="${cutiMonthFilter}" onchange="setCutiMonthFilter(this.value)" class="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs text-white">
+                                <button onclick="setCutiMonthFilter('')" class="bg-slate-800 hover:bg-slate-700 text-white rounded-lg px-2 py-1.5 text-xs font-bold transition">Reset</button>
 
                                 <select id="filterPenyiarCuti" class="bg-slate-950 border border-slate-800 text-slate-300 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-indigo-500 max-w-[150px]">
                                     <option value="all">Semua Penyiar</option>
@@ -2542,7 +2738,7 @@ ${l.status === 'ACC' ? `<div class="mt-3"><button onclick="printSuratIzin('${l.i
                         </div>
 
                         <div class="space-y-4">
-                            ${leaveRequests.map(l => `
+                            ${filteredLeaves.map(l => `
                                 <div class="glass-card p-5 rounded-2xl border border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs">
                                     <div class="space-y-1">
                                         <div class="flex items-center gap-2">
@@ -2555,6 +2751,7 @@ ${l.status === 'ACC' ? `<div class="mt-3"><button onclick="printSuratIzin('${l.i
                                     <div class="flex gap-2">
                                         <button onclick="approveLeave('${l.id}', 'ACC')" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl">ACC</button>
                                         <button onclick="approveLeave('${l.id}', 'Ditolak')" class="px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl">Tolak</button>
+                                        <button onclick="deleteCuti('${l.id}')" class="px-3 py-2 bg-rose-900/50 hover:bg-rose-800 text-rose-300 font-bold rounded-xl"><i class="fa-solid fa-trash"></i></button>
                                     </div>
                                 </div>
                             `).join('')}
@@ -2602,6 +2799,7 @@ function openAddLeaveModal() {
                             <option value="Cuti Tahunan">Cuti Tahunan</option>
                             <option value="Ijin Sakit">Ijin Sakit</option>
                             <option value="Ijin Keperluan Keluarga">Ijin Keperluan Keluarga</option>
+                            <option value="Keperluan Lainnya">Keperluan Lainnya</option>
                         </select>
                     </div>
                     <div>
@@ -3124,7 +3322,6 @@ function openAddLeaveModal() {
                 if (penyiarName) {
                     leftArea.innerHTML = `
                         <div class="text-center min-w-[200px]">
-                            <p class="text-slate-600 mb-1">Mengetahui,</p>
                             <p class="font-bold text-slate-900">Penyiar</p>
                             <div class="h-16 my-1"></div>
                             <p class="font-bold text-slate-900 underline">${penyiarName}</p>
@@ -3132,12 +3329,10 @@ function openAddLeaveModal() {
                     `;
                 } else {
                     leftArea.innerHTML = `
-                        <div class="text-center min-w-[200px]">
-                            <p class="text-slate-600 mb-1">Mengetahui,</p>
-                            <div class="h-16 my-1"></div>
+                        <div class="flex flex-col justify-end h-full pb-2">
+                            <p class="text-slate-500 text-left">Dokumen ini diterbitkan secara elektronik oleh Portal Resmi JCCFM.</p>
+                            <p class="text-[10px] text-slate-400 mt-1 text-left">Verified Security Token: JCC-PDF-AUTH-2026</p>
                         </div>
-                        <p class="text-slate-500 text-left">Dokumen ini diterbitkan secara elektronik oleh Portal Resmi JCCFM.</p>
-                        <p class="text-[10px] text-slate-400 mt-1 text-left">Verified Security Token: JCC-PDF-AUTH-2026</p>
                     `;
                 }
             }
@@ -3368,6 +3563,7 @@ window.saveLaporanTugas = saveLaporanTugas;
 window.accSuratTugas = accSuratTugas;
 window.terimaBanding = terimaBanding;
 window.tolakBanding = tolakBanding;
+window.deleteSuratTugas = deleteSuratTugas;
 window.previewPDFSuratTugas = previewPDFSuratTugas;
 window.downloadHtmlToPdf = downloadHtmlToPdf;
     
