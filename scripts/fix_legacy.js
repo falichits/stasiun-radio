@@ -49,7 +49,7 @@ const replacement = `function openAddProgramModal() {
             document.getElementById("kopStationName").innerText = kopSuratConfig.stationName;
             document.getElementById("kopStationAddress").innerText = kopSuratConfig.address;
             document.getElementById("kopCityDate").innerText = \`\${kopSuratConfig.city}, 27 Juli 2026\`;
-            document.getElementById("kopTitle").innerText = \`Mengetahui, \${kopSuratConfig.signeeTitle}\`;
+            document.getElementById("kopTitle").innerText = \`\${kopSuratConfig.signeeTitle}\`;
             document.getElementById("kopSignee").innerText = kopSuratConfig.signeeName;
             document.getElementById("printableContent").innerHTML = htmlBody;
 
