@@ -1,3 +1,4 @@
+import { supabase } from './lib/supabase.js';
 
         /* ==========================================================================
            STATE & INITIAL DATA SETUP
@@ -6,7 +7,7 @@
         // Initial Admin Kop Surat & Dokumentasi Template Config
         let kopSuratConfig = {
             stationName: "STASIUN RADIO JCCFM 101.5 MHz",
-            address: "Jl. Pemuda No. 88, Komplek Penyiaran Nusantara, Kota JCC | Hotline: (021) 889-1015 | Web: www.jccfm.com",
+            address: "Jl. Pemuda No. 88, Komplek Penyiaran Nusantara, Kota JCC | Hotline: (021) 889-1015 | Web: https://myjccfm.vercel.app/",
             city: "Kota JCC",
             signeeTitle: "Station Manager & Penanggung Jawab",
             signeeName: "H. Irwan Setiawan, M.I.Kom",
@@ -52,6 +53,65 @@
         // Notifications System State
         let notifications = [];
 
+        async function loadInitialData() {
+            try {
+                const [
+                    { data: pData },
+                    { data: rData },
+                    { data: aData },
+                    { data: agData },
+                    { data: stData },
+                    { data: achData },
+                    { data: lrData },
+                    { data: lData },
+                    { data: tnData },
+                    { data: scData },
+                    { data: acData }
+                ] = await Promise.all([
+                    supabase.from('penyiars').select('*').order('created_at', { ascending: false }),
+                    supabase.from('radio_programs').select('*'),
+                    supabase.from('attendance_logs').select('*').order('created_at', { ascending: false }),
+                    supabase.from('agendas').select('*').order('created_at', { ascending: false }),
+                    supabase.from('surat_tugas').select('*').order('created_at', { ascending: false }),
+                    supabase.from('achievements').select('*').order('created_at', { ascending: false }),
+                    supabase.from('leave_requests').select('*').order('created_at', { ascending: false }),
+                    supabase.from('listeners_data').select('*').order('created_at', { ascending: false }),
+                    supabase.from('ticker_news').select('*').eq('active', true),
+                    supabase.from('station_config').select('*').single(),
+                    supabase.from('admin_config').select('*').single()
+                ]);
+
+                if (pData) penyiars = pData;
+                if (rData) radioPrograms = rData;
+                if (aData) attendanceLogs = aData;
+                if (agData) agendas = agData;
+                if (stData) suratTugas = stData;
+                if (achData) achievements = achData;
+                if (lrData) leaveRequests = lrData;
+                if (lData) listenersData = lData;
+                if (tnData) tickerNewsList = tnData.map(t => t.content);
+                if (scData) {
+                    kopSuratConfig = {
+                        stationName: scData.station_name,
+                        address: scData.address,
+                        city: scData.city,
+                        signeeTitle: scData.signee_title,
+                        signeeName: scData.signee_name,
+                        docTemplateHeader: scData.doc_template_header,
+                        ttdImage: scData.ttd_image
+                    };
+                }
+                if (acData) {
+                    // Inject admin config into window for login check
+                    window.__adminConfig = acData;
+                }
+            } catch (err) {
+                console.error("Error loading Supabase data:", err);
+            }
+        }
+        
+
+
         // Audience / Listeners Database
         let listenersData = [];
 
@@ -70,7 +130,11 @@ let adminData = {
            AUTHENTICATION & NAVIGATION LOGIC
            ========================================================================== */
 
-        window.onload = function () {
+        async function initApp() { await loadInitialData();
+            if (localStorage.getItem('currentUser')) {
+                currentUser = JSON.parse(localStorage.getItem('currentUser'));
+                setupDashboardApp();
+            }
             startClock();
             handleRouting();
         };
@@ -174,7 +238,7 @@ let adminData = {
             }
         }
 
-        function handleLogin(e) {
+        async function handleLogin(e) {
             e.preventDefault();
             const email = document.getElementById('loginEmail').value;
             const pass = document.getElementById('loginPassword').value;
@@ -184,6 +248,7 @@ let adminData = {
                     role: 'admin',
                     data: { ...adminData }
                 };
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
                 setupDashboardApp();
                 switchView('adminDashboard');
                 showNotification('Berhasil masuk sebagai Admin System');
@@ -196,6 +261,7 @@ let adminData = {
                     role: 'penyiar',
                     data: foundPenyiar
                 };
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
                 setupDashboardApp();
                 switchView('penyiarDashboard');
                 showNotification(`Selamat datang kembali, ${foundPenyiar.name}`);
@@ -383,6 +449,7 @@ let adminData = {
 
         function logout() {
             currentUser = null;
+            localStorage.removeItem('currentUser');
             if (checkoutTimerInterval) clearInterval(checkoutTimerInterval);
             window.location.hash = btoa('login');
             showNotification('Anda telah keluar dari akun');
@@ -656,13 +723,13 @@ let adminData = {
             finalizeCheckout("Check-Out Otomatis (2 Jam)");
         }
 
-        function finalizeCheckout(statusLabel) {
+        async function finalizeCheckout(statusLabel) {
             if (!currentActiveAttendance) return;
 
             const now = new Date();
             const timeStr = now.toLocaleTimeString('id-ID');
 
-            attendanceLogs.unshift({
+            const logEntry = {
                 id: currentActiveAttendance.id,
                 penyiarId: currentActiveAttendance.penyiarId,
                 penyiarName: currentActiveAttendance.penyiarName,
@@ -671,7 +738,16 @@ let adminData = {
                 checkIn: currentActiveAttendance.checkIn,
                 checkOut: timeStr,
                 status: statusLabel
-            });
+            };
+
+            const { error } = await supabase.from('attendance_logs').insert([logEntry]);
+            if (error) {
+                console.error("Gagal menyimpan log absensi:", error);
+                showNotification("Gagal menyimpan absensi ke database!", "error");
+                return;
+            }
+
+            attendanceLogs.unshift(logEntry);
 
             currentActiveAttendance = null;
             if (checkoutTimerInterval) clearInterval(checkoutTimerInterval);
@@ -1026,7 +1102,7 @@ let adminData = {
                                                 <div class="text-white">${p.phone}</div>
                                                 <div class="text-[10px] text-slate-400 truncate max-w-[150px]">${p.address}</div>
                                             </td>
-                                            <td class="p-4 font-mono text-slate-400">${p.joinDate}</td>
+                                            <td class="p-4 font-mono text-slate-400">${p.join_date || p.joinDate || '-'}</td>
                                             <td class="p-4 text-center">
                                                 <div class="flex items-center justify-center gap-1.5">
                                                     <button onclick="openCVExportModal('${p.id}')" title="Export CV / Surat" class="p-2 bg-indigo-600/20 text-indigo-300 hover:bg-indigo-600 hover:text-white rounded-lg transition-all">
@@ -1209,7 +1285,7 @@ let adminData = {
             const fileInput = document.getElementById('addPenPhoto');
             let photoUrl = 'https://ui-avatars.com/api/?background=random&color=fff&name=' + encodeURIComponent(document.getElementById('addPenName').value);
             
-            const createPenyiar = (finalPhotoUrl) => {
+            const createPenyiar = async (finalPhotoUrl) => {
                 const newObj = {
                     id: document.getElementById('addPenId').value,
                     name: document.getElementById('addPenName').value,
@@ -1223,6 +1299,24 @@ let adminData = {
                     gender: document.getElementById('addPenGender').value
                 };
 
+                const insertData = {
+                    name: newObj.name,
+                    email: newObj.email,
+                    password: newObj.password,
+                    category: newObj.category,
+                    phone: newObj.phone,
+                    address: newObj.address,
+                    photo: newObj.photo,
+                    status: newObj.status,
+                    join_date: newObj.joinDate
+                };
+                const { data, error } = await supabase.from('penyiars').insert([insertData]).select();
+                if (error) {
+                    alert('Error saving to database: ' + error.message);
+                    console.error(error);
+                    return;
+                }
+                newObj.id = data[0].id;
                 penyiars.unshift(newObj);
                 closeAppModal();
                 showNotification(`Penyiar ${newObj.name} berhasil ditambahkan`);
@@ -1240,7 +1334,8 @@ let adminData = {
             }
         }
 
-        function deletePenyiar(id) {
+        async function deletePenyiar(id) {
+            await supabase.from('penyiars').delete().eq('id', id);
             penyiars = penyiars.filter(p => p.id !== id);
             showNotification('Penyiar berhasil dihapus dari data');
             renderAdminPenyiarMaster();
@@ -1406,8 +1501,8 @@ let adminData = {
                                             <td class="p-3 font-medium">${st.target === 'ALL' ? 'Semua Penyiar' : getPenyiarName(st.target)}</td>
                                             <td class="p-3">
                                                 <div class="text-[10px] text-slate-400 mb-1">Surat Dibuat: ${st.dateMasuk || '-'}</div>
-                                                <div><i class="fa-regular fa-calendar mr-1 text-slate-500"></i>${st.waktu.replace('T', ' ')}</div>
-                                                <div class="mt-1"><i class="fa-solid fa-location-dot mr-1 text-slate-500"></i>${st.lokasi}</div>
+                                                <div><i class="fa-regular fa-calendar mr-1 text-slate-500"></i>${st.waktu ? st.waktu.replace('T', ' ') : '-'}</div>
+                                                <div class="mt-1"><i class="fa-solid fa-location-dot mr-1 text-slate-500"></i>${st.lokasi || '-'}</div>
                                             </td>
                                             <td class="p-3">${getBadgeHtml(st.status)}</td>
                                             <td class="p-3 text-center space-y-2">
@@ -1459,8 +1554,8 @@ let adminData = {
                                         ${st.link ? `<a href="${st.link}" target="_blank" class="text-[11px] text-blue-400 mb-3 inline-block hover:underline"><i class="fa-solid fa-link"></i> Link Dokumen</a>` : ''}
                                         <div class="text-[11px] text-slate-500 space-y-1 mb-4">
                                             <div class="text-indigo-400 font-medium mb-2"><i class="fa-solid fa-file-signature mr-1"></i> Dibuat: ${st.dateMasuk || '-'}</div>
-                                            <div><i class="fa-regular fa-clock mr-1"></i> ${st.waktu.replace('T', ' ')}</div>
-                                            <div><i class="fa-solid fa-location-dot mr-1"></i> ${st.lokasi}</div>
+                                            <div><i class="fa-regular fa-clock mr-1"></i> ${st.waktu ? st.waktu.replace('T', ' ') : '-'}</div>
+                                            <div><i class="fa-solid fa-location-dot mr-1"></i> ${st.lokasi || '-'}</div>
                                         </div>
                                     </div>
                                     <div class="pt-3 border-t border-slate-800">
@@ -1575,9 +1670,9 @@ let adminData = {
             document.getElementById('agDateMasuk').value = new Date().toISOString().split('T')[0];
         }
 
-        function saveNewAgenda(e) {
+        async function saveNewAgenda(e) {
             e.preventDefault();
-            agendas.push({
+            const newAgenda = {
                 id: 'ag-' + Date.now(),
                 title: document.getElementById('agTitle').value,
                 target: (document.getElementById('agTargetHidden') || document.getElementById('agTarget')).value,
@@ -1586,13 +1681,21 @@ let adminData = {
                 date: document.getElementById('agDate').value,
                 dateMasuk: document.getElementById('agDateMasuk').value,
                 createdBy: currentUser.role === 'admin' ? 'Admin' : currentUser.data.name
-            });
+            };
+            const { error } = await supabase.from('agendas').insert([newAgenda]);
+            if(error) {
+                console.error("Gagal menyimpan agenda:", error);
+                showNotification("Gagal menyimpan agenda ke database!", "error");
+                return;
+            }
+            agendas.push(newAgenda);
             closeAppModal();
             showNotification('Agenda berhasil diterbitkan');
             renderAgendaView();
         }
 
-        function deleteAgenda(id) {
+        async function deleteAgenda(id) {
+            await supabase.from('agendas').delete().eq('id', id);
             agendas = agendas.filter(a => a.id !== id);
             showNotification('Agenda dihapus');
             renderAgendaView();
@@ -1656,9 +1759,9 @@ let adminData = {
             document.getElementById('stDateMasuk').value = new Date().toISOString().split('T')[0];
         }
 
-        function saveNewSuratTugas(e) {
+        async function saveNewSuratTugas(e) {
             e.preventDefault();
-            suratTugas.unshift({
+            const newSt = {
                 id: 'st-' + Date.now(),
                 noSurat: 'ST/JCC/2026/' + Math.floor(Math.random() * 900 + 100),
                 kategori: document.getElementById('stKategori').value,
@@ -1671,17 +1774,27 @@ let adminData = {
                 status: 'Menunggu',
                 alasanBanding: '',
                 laporanHasil: ''
-            });
+            };
+            
+            const { error } = await supabase.from('surat_tugas').insert([newSt]);
+            if(error) {
+                console.error("Gagal menyimpan surat tugas:", error);
+                showNotification('Gagal menyimpan ke database!', true);
+                return;
+            }
+
+            suratTugas.unshift(newSt);
             closeAppModal();
             showNotification('Surat Tugas diterbitkan!');
             renderAgendaView();
         }
 
         // Penyiar Actions
-        function terimaSuratTugas(id) {
+        async function terimaSuratTugas(id) {
             const st = suratTugas.find(x => x.id === id);
             if(st) {
                 st.status = 'Diterima';
+                await supabase.from('surat_tugas').update({ status: 'Diterima' }).eq('id', id);
                 showNotification('Tugas diterima.');
                 renderAgendaView();
             }
@@ -1700,12 +1813,13 @@ let adminData = {
             openAppModal('Ajukan Banding Tugas', body);
         }
 
-        function saveBanding(e, id) {
+        async function saveBanding(e, id) {
             e.preventDefault();
             const st = suratTugas.find(x => x.id === id);
             if(st) {
                 st.status = 'Banding';
                 st.alasanBanding = document.getElementById('bandingReason').value;
+                await supabase.from('surat_tugas').update({ status: 'Banding', alasanBanding: st.alasanBanding }).eq('id', id);
                 closeAppModal();
                 showNotification('Banding berhasil diajukan.');
                 renderAgendaView();
@@ -1725,12 +1839,13 @@ let adminData = {
             openAppModal('Kirim Laporan Tugas', body);
         }
 
-        function saveLaporanTugas(e, id) {
+        async function saveLaporanTugas(e, id) {
             e.preventDefault();
             const st = suratTugas.find(x => x.id === id);
             if(st) {
                 st.status = 'Laporan Terkirim';
                 st.laporanHasil = document.getElementById('laporanText').value;
+                await supabase.from('surat_tugas').update({ status: 'Laporan Terkirim', laporanHasil: st.laporanHasil }).eq('id', id);
                 closeAppModal();
                 showNotification('Laporan dikirim ke Admin.');
                 renderAgendaView();
@@ -1738,10 +1853,11 @@ let adminData = {
         }
 
         // Admin Actions
-        function deleteSuratTugas(id) {
+        async function deleteSuratTugas(id) {
             if (confirm('Apakah Anda yakin ingin menghapus surat tugas ini?')) {
                 const idx = suratTugas.findIndex(x => x.id === id);
                 if(idx !== -1) {
+                    await supabase.from('surat_tugas').delete().eq('id', id);
                     suratTugas.splice(idx, 1);
                     showNotification('Surat tugas berhasil dihapus.');
                     renderAgendaView();
@@ -1749,29 +1865,32 @@ let adminData = {
             }
         }
 
-        function accSuratTugas(id) {
+        async function accSuratTugas(id) {
             const st = suratTugas.find(x => x.id === id);
             if(st) {
                 st.status = 'Selesai (ACC)';
+                await supabase.from('surat_tugas').update({ status: 'Selesai (ACC)' }).eq('id', id);
                 showNotification('Tugas di-ACC.');
                 renderAgendaView();
             }
         }
         
-        function terimaBanding(id) {
+        async function terimaBanding(id) {
             const st = suratTugas.find(x => x.id === id);
             if(st) {
                 st.status = 'Dilepas (Batal)';
+                await supabase.from('surat_tugas').update({ status: 'Dilepas (Batal)' }).eq('id', id);
                 showNotification('Tugas dilepas.');
                 renderAgendaView();
             }
         }
         
-        function tolakBanding(id) {
+        async function tolakBanding(id) {
             const st = suratTugas.find(x => x.id === id);
             if(st) {
                 st.status = 'Menunggu'; // back to normal
                 st.alasanBanding = '';
+                await supabase.from('surat_tugas').update({ status: 'Menunggu', alasanBanding: '' }).eq('id', id);
                 showNotification('Banding ditolak. Status kembali Menunggu.');
                 renderAgendaView();
             }
@@ -1783,12 +1902,22 @@ let adminData = {
 
             const penerima = st.target === 'ALL' ? 'Semua Penyiar' : getPenyiarName(st.target);
 
+            let addr = kopSuratConfig.address || "";
+            let htmlKopAddress = "";
+            if(addr.includes(' | Web:')) {
+                let parts = addr.split(' | Web:');
+                htmlKopAddress = `<i>${parts[0]}</i><br>Website: ${parts[1]} | Email: absensijccfm@gmail.com`;
+            } else {
+                htmlKopAddress = `<i>${addr}</i>`;
+            }
+
             const pdfHtml = `
                 <div id="pdf-export-content" class="bg-white text-black p-8 font-serif leading-relaxed mx-auto" style="width: 210mm; min-height: 297mm; max-width: 100%;">
                     <div class="text-center border-b-4 border-double border-black pb-4 mb-6">
-                        <h2 class="text-2xl font-bold uppercase tracking-wider text-black">RADIO JCC FM 101.5 MHz</h2>
-                        <p class="text-sm italic text-black">Jl. Media Utama No. 101, Kota JCC | Telp: (021) 123456</p>
-                        <p class="text-sm text-black">Website: www.jccradio.com | Email: redaksi@jccradio.com</p>
+                        <h2 class="text-2xl font-bold uppercase text-black font-serif">${kopSuratConfig.stationName}</h2>
+                        <div class="text-[13px] text-black font-serif mt-1">
+                            ${htmlKopAddress}
+                        </div>
                     </div>
 
                     <div class="text-center mb-6">
@@ -2434,7 +2563,7 @@ function exportAdminGlobalPDF() {
             openAppModal('Buat Event Baru', modalContent);
         }
 
-        function saveNewAchievement(e) {
+        async function saveNewAchievement(e) {
             e.preventDefault();
             const newAch = {
                 id: "ACH-" + Date.now(),
@@ -2446,6 +2575,14 @@ function exportAdminGlobalPDF() {
                 period: "Juli - Agustus 2026",
                 participants: []
             };
+            
+            const { error } = await supabase.from('achievements').insert([newAch]);
+            if (error) {
+                console.error("Gagal menyimpan event:", error);
+                showNotification("Gagal menyimpan event ke database!", "error");
+                return;
+            }
+
             achievements.unshift(newAch);
             closeAppModal();
             if (typeof addNotification !== 'undefined') {
@@ -2455,42 +2592,45 @@ function exportAdminGlobalPDF() {
             renderAchievementView();
         }
 
-        function approveAchievementProof(achId, penyiarId) {
+        async function approveAchievementProof(achId, penyiarId) {
             const ach = achievements.find(a => a.id === achId);
             if(ach) {
                 const part = ach.participants.find(p => p.penyiarId === penyiarId);
                 if(part) {
                     part.status = 'Selesai';
+                    await supabase.from('achievements').update({ participants: ach.participants }).eq('id', achId);
                     showNotification('Bukti di-ACC! Poin ditambahkan.');
                     renderAchievementView();
                 }
             }
         }
 
-        function rejectAchievementProof(achId, penyiarId) {
+        async function rejectAchievementProof(achId, penyiarId) {
             const ach = achievements.find(a => a.id === achId);
             if(ach) {
                 const part = ach.participants.find(p => p.penyiarId === penyiarId);
                 if(part) {
                     part.status = 'Tidak Diterima';
+                    await supabase.from('achievements').update({ participants: ach.participants }).eq('id', achId);
                     showNotification('Bukti Ditolak!');
                     renderAchievementView();
                 }
             }
         }
 
-        function deleteAchievement(achId) {
+        async function deleteAchievement(achId) {
             if(confirm('Yakin ingin menghapus event ini?')) {
                 const achToDelete = achievements.find(a => a.id === achId);
                 if (achToDelete && typeof achievementBroadcasts !== 'undefined') {
                     achievementBroadcasts = achievementBroadcasts.filter(b => !b.text.includes(achToDelete.title));
                 }
+                await supabase.from('achievements').delete().eq('id', achId);
                 achievements = achievements.filter(a => a.id !== achId);
                 showNotification('Event dihapus');
                 renderAchievementView();
             }
         }
-        function ignoreChallenge(achId) {
+        async function ignoreChallenge(achId) {
             const ach = achievements.find(a => a.id === achId);
             if (!ach) return;
             ach.participants.push({
@@ -2498,10 +2638,11 @@ function exportAdminGlobalPDF() {
                 status: 'Diabaikan',
                 proofLink: ''
             });
+            await supabase.from('achievements').update({ participants: ach.participants }).eq('id', achId);
             renderAchievementView();
         }
 
-        function acceptChallenge(achId) {
+        async function acceptChallenge(achId) {
             const ach = achievements.find(a => a.id === achId);
             if (!ach) return;
             
@@ -2516,6 +2657,7 @@ function exportAdminGlobalPDF() {
                 status: 'Mengikuti',
                 proofLink: ''
             });
+            await supabase.from('achievements').update({ participants: ach.participants }).eq('id', achId);
             if (typeof achievementBroadcasts !== 'undefined') {
                 achievementBroadcasts.unshift({
                     text: `${currentUser.data.name} telah menerima & mengikuti tantangan "${ach.title}"`
@@ -2579,7 +2721,7 @@ function exportAdminGlobalPDF() {
             openAppModal('Kirim Bukti Tantangan', modalContent);
         }
 
-        function saveJoinAchievement(e, achId) {
+        async function saveJoinAchievement(e, achId) {
             e.preventDefault();
             const link = document.getElementById('achProofLink').value;
             const ach = achievements.find(a => a.id === achId);
@@ -2596,6 +2738,7 @@ function exportAdminGlobalPDF() {
                     status: 'Menunggu Admin'
                 });
             }
+            await supabase.from('achievements').update({ participants: ach.participants }).eq('id', achId);
             if (typeof achievementBroadcasts !== 'undefined') {
                 achievementBroadcasts.unshift({
                     text: `${currentUser.data.name} telah mengirimkan bukti untuk tantangan "${ach.title}"`
@@ -2683,10 +2826,16 @@ function exportAdminGlobalPDF() {
             renderCutiView();
         }
 
-        window.deleteCuti = function(id) {
+        window.deleteCuti = async function(id) {
             if (confirm('Yakin ingin menghapus pengajuan ini?')) {
                 const idx = leaveRequests.findIndex(x => x.id === id);
                 if (idx !== -1) {
+                    const { error } = await supabase.from('leave_requests').delete().eq('id', id);
+                    if (error) {
+                        console.error("Gagal menghapus cuti:", error);
+                        showNotification("Gagal menghapus data dari database!", "error");
+                        return;
+                    }
                     leaveRequests.splice(idx, 1);
                     showNotification('Pengajuan cuti/ijin berhasil dihapus.');
                     renderCutiView();
@@ -2859,7 +3008,7 @@ function openAddLeaveModal() {
             openAppModal('Pengajuan Cuti / Ijin Baru', body);
         }
 
-        function saveNewLeave(e) {
+        async function saveNewLeave(e) {
             e.preventDefault();
             const newL = {
                 id: "CUT-" + Date.now(),
@@ -2873,18 +3022,33 @@ function openAddLeaveModal() {
                 status: "Pending",
                 adminNotes: ""
             };
+            const { error } = await supabase.from('leave_requests').insert([newL]);
+            if (error) {
+                console.error("Gagal mengajukan cuti:", error);
+                showNotification("Gagal mengajukan cuti ke database!", "error");
+                return;
+            }
             leaveRequests.unshift(newL);
             closeAppModal();
-            addNotification("Pengajuan Cuti", `Pengajuan cuti oleh ${currentUser.data.name} menunggu review`, "leave");
+            if (typeof addNotification !== 'undefined') {
+                addNotification("Pengajuan Cuti", `Pengajuan cuti oleh ${currentUser.data.name} menunggu review`, "leave");
+            }
             showNotification('Pengajuan cuti berhasil dikirim');
             renderCutiView();
         }
 
-        function approveLeave(id, status) {
+        async function approveLeave(id, status) {
             const l = leaveRequests.find(item => item.id === id);
             if (l) {
+                const updatedNotes = status === 'ACC' ? 'Disetujui oleh Admin' : 'Ditolak oleh Admin';
+                const { error } = await supabase.from('leave_requests').update({ status: status, adminNotes: updatedNotes }).eq('id', id);
+                if (error) {
+                    console.error("Gagal mengubah status cuti:", error);
+                    showNotification("Gagal mengubah status ke database!", "error");
+                    return;
+                }
                 l.status = status;
-                l.adminNotes = status === 'ACC' ? 'Disetujui oleh Admin' : 'Ditolak oleh Admin';
+                l.adminNotes = updatedNotes;
                 showNotification(`Cuti ${status}`);
                 renderCutiView();
             }
@@ -3015,7 +3179,7 @@ function openAddLeaveModal() {
             openAppModal('Tambah Database Pendengar', body);
         }
 
-        function saveNewListener(e) {
+        async function saveNewListener(e) {
             e.preventDefault();
             const newL = {
                 id: "LIS-" + Date.now(),
@@ -3026,6 +3190,12 @@ function openAddLeaveModal() {
                 favoriteProgram: document.getElementById('lisProg').value,
                 addedBy: currentUser.data.name
             };
+            const { error } = await supabase.from('listeners_data').insert([newL]);
+            if (error) {
+                console.error("Gagal menyimpan data pendengar:", error);
+                showNotification("Gagal menyimpan data ke database!", "error");
+                return;
+            }
             listenersData.unshift(newL);
             closeAppModal();
             showNotification('Pendengar baru berhasil disimpan');
@@ -3108,18 +3278,29 @@ function openAddLeaveModal() {
             `;
         }
 
-        function addTickerNews() {
+        async function addTickerNews() {
             const val = document.getElementById('newTickerContent').value.trim();
             if(!val) return alert('Teks tidak boleh kosong!');
+            
+            const dbObj = { id: "TICK-" + Date.now(), content: val, active: true };
+            const { error } = await supabase.from('ticker_news').insert([dbObj]);
+            if (error) {
+                console.error("Gagal menyimpan ticker:", error);
+                showNotification("Gagal menyimpan ticker ke database!", "error");
+                return;
+            }
+
             tickerNewsList.push(val);
-            document.getElementById('tickerContent').innerText = tickerNewsList.join(" • ");
+            document.getElementById('tickerContent').innerText = tickerNewsList.join("   ");
             renderTickerSettings();
         }
 
-        function deleteTickerNews(index) {
+        async function deleteTickerNews(index) {
             if(confirm('Yakin ingin menghapus pengumuman ini?')) {
+                const deletedContent = tickerNewsList[index];
+                await supabase.from('ticker_news').delete().eq('content', deletedContent);
                 tickerNewsList.splice(index, 1);
-                document.getElementById('tickerContent').innerText = tickerNewsList.join(" • ");
+                document.getElementById('tickerContent').innerText = tickerNewsList.join("   ");
                 renderTickerSettings();
             }
         }
@@ -3203,7 +3384,7 @@ function openAddLeaveModal() {
             `;
         }
 
-        function saveKopConfig(e) {
+        async function saveKopConfig(e) {
             e.preventDefault();
             kopSuratConfig.stationName = document.getElementById('cfgStationName').value;
             kopSuratConfig.address = document.getElementById('cfgAddress').value;
@@ -3211,7 +3392,24 @@ function openAddLeaveModal() {
             kopSuratConfig.city = document.getElementById('cfgCity').value;
             kopSuratConfig.signeeTitle = document.getElementById('cfgSigneeTitle').value;
             kopSuratConfig.signeeName = document.getElementById('cfgSigneeName').value;
-            // ttdImage already saved live via previewTtdUpload()
+            
+            const dbObj = {
+                station_name: kopSuratConfig.stationName,
+                address: kopSuratConfig.address,
+                city: kopSuratConfig.city,
+                signee_title: kopSuratConfig.signeeTitle,
+                signee_name: kopSuratConfig.signeeName,
+                doc_template_header: kopSuratConfig.docTemplateHeader
+                // Note: ttd_image is not updated here, it relies on separate logic if any
+            };
+
+            const { error } = await supabase.from('station_config').update(dbObj).eq('id', 1);
+            if (error) {
+                console.error("Gagal update konfigurasi KOP:", error);
+                showNotification("Gagal menyimpan ke database!", "error");
+                return;
+            }
+
             showNotification('Konfigurasi KOP & template surat berhasil diperbarui!');
         }
 
@@ -3311,20 +3509,28 @@ function openAddLeaveModal() {
             openAppModal('Tambah Program Radio', body);
         }
 
-        function saveNewProgram(e) {
+        async function saveNewProgram(e) {
             e.preventDefault();
-            radioPrograms.push({
+            const newProg = {
                 id: "PROG-" + Date.now(),
                 name: document.getElementById('progName').value,
                 time: document.getElementById('progTime').value,
                 category: document.getElementById('progCat').value
-            });
+            };
+            const { error } = await supabase.from('radio_programs').insert([newProg]);
+            if (error) {
+                console.error("Gagal menyimpan program:", error);
+                showNotification("Gagal menyimpan program ke database!", "error");
+                return;
+            }
+            radioPrograms.push(newProg);
             closeAppModal();
             showNotification('Program radio ditambahkan');
             renderProgramListView();
         }
 
-        function deleteProgram(id) {
+        async function deleteProgram(id) {
+            await supabase.from('radio_programs').delete().eq('id', id);
             radioPrograms = radioPrograms.filter(p => p.id !== id);
             showNotification('Program dihapus');
             renderProgramListView();
@@ -3332,7 +3538,13 @@ function openAddLeaveModal() {
 
         function triggerPrintModal(htmlBody, penyiarName = null) {
             document.getElementById('kopStationName').innerText = kopSuratConfig.stationName;
-            document.getElementById('kopStationAddress').innerText = kopSuratConfig.address;
+            let addr = kopSuratConfig.address || "";
+            if(addr.includes(' | Web:')) {
+                let parts = addr.split(' | Web:');
+                document.getElementById('kopStationAddress').innerHTML = `<i>${parts[0]}</i><br>Website: ${parts[1]} | Email: absensijccfm@gmail.com`;
+            } else {
+                document.getElementById('kopStationAddress').innerHTML = `<i>${addr}</i>`;
+            }
             document.getElementById('kopCityDate').innerText = `${kopSuratConfig.city}, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`;
             document.getElementById('kopTitle').innerText = `${kopSuratConfig.signeeTitle}`;
             document.getElementById('kopSignee').innerText = kopSuratConfig.signeeName;
@@ -3641,3 +3853,5 @@ window.showNotification = showNotification;
   window.saveJoinAchievement = typeof saveJoinAchievement !== 'undefined' ? saveJoinAchievement : function(){ alert('Belum diimplementasi'); };
   window.openCertificateModal = typeof openCertificateModal !== 'undefined' ? openCertificateModal : function(){ alert('Belum diimplementasi'); };
 
+
+if(document.readyState === 'complete' || document.readyState === 'interactive') { initApp(); } else { window.addEventListener('DOMContentLoaded', initApp); }
