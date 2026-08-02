@@ -856,14 +856,21 @@ let adminData = {
             `;
         }
 
-        function handlePenyiarPasswordChange(e) {
+        async function handlePenyiarPasswordChange(e) {
             e.preventDefault();
             const newPass = document.getElementById('newPenyiarPass').value;
             currentUser.data.password = newPass;
             const found = penyiars.find(p => p.id === currentUser.data.id);
             if (found) found.password = newPass;
 
-            showNotification('Password berhasil diperbarui!');
+            const { error } = await supabase.from('penyiars').update({ password: newPass }).eq('id', currentUser.data.id);
+            if (error) {
+                console.error("Gagal update password penyiar:", error);
+                showNotification("Gagal menyimpan ke database!", "error");
+                return;
+            }
+
+            showNotification('Password berhasil diperbarui di database!');
             document.getElementById('newPenyiarPass').value = '';
         }
 
@@ -3722,7 +3729,7 @@ function openAddLeaveModal() {
             openAppModal('Edit Profil Admin', body);
         }
 
-        function saveAdminProfile(e) {
+        async function saveAdminProfile(e) {
             e.preventDefault();
             adminData.name = document.getElementById('editAdminName').value;
             adminData.email = document.getElementById('editAdminEmail').value;
@@ -3730,6 +3737,22 @@ function openAddLeaveModal() {
             adminData.photo = document.getElementById('editAdminPhoto').value;
             adminData.phone = document.getElementById('editAdminPhone').value;
             adminData.address = document.getElementById('editAdminAddress').value;
+
+            // Sync with Supabase (assuming admin_config has id=1)
+            const { error } = await supabase.from('admin_config').update({
+                name: adminData.name,
+                email: adminData.email,
+                password: adminData.password,
+                photo: adminData.photo,
+                phone: adminData.phone,
+                address: adminData.address
+            }).eq('id', 1);
+
+            if (error) {
+                console.error("Gagal update profil admin:", error);
+                showNotification("Gagal menyimpan profil ke database!", "error");
+                return;
+            }
 
             // Update currentUser if currently logged in as admin
             if (currentUser && currentUser.role === 'admin') {
@@ -3743,6 +3766,7 @@ function openAddLeaveModal() {
             }
 
             closeAppModal();
+            showNotification('Profil Admin berhasil diperbarui di database!');
             showNotification('Profil Admin berhasil diperbarui!', 'success');
             if (document.getElementById('pageTitle').innerText === 'Profil Biodata Admin') {
                 renderAdminProfile();
