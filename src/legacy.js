@@ -1307,6 +1307,7 @@ let adminData = {
                 };
 
                 const insertData = {
+                    id: newObj.id,
                     name: newObj.name,
                     email: newObj.email,
                     password: newObj.password,
