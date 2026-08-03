@@ -134,10 +134,34 @@ let adminData = {
             if (localStorage.getItem('currentUser')) {
                 currentUser = JSON.parse(localStorage.getItem('currentUser'));
                 setupDashboardApp();
-            }
-            if (localStorage.getItem('activeAttendance')) {
-                currentActiveAttendance = JSON.parse(localStorage.getItem('activeAttendance'));
-                startCountdownTimer();
+                
+                if (currentUser && currentUser.role !== 'admin') {
+                    const activeLog = attendanceLogs.find(l => l.penyiarId === currentUser.data.id && l.status === 'Active');
+                    if (activeLog) {
+                        let sTime = Date.now();
+                        try {
+                            const timeStrFormat = activeLog.checkIn.replace(/\./g, ':');
+                            const parsedDate = new Date(`${activeLog.date}T${timeStrFormat}`);
+                            if (!isNaN(parsedDate)) sTime = parsedDate.getTime();
+                        } catch(e) {}
+                        
+                        currentActiveAttendance = {
+                            id: activeLog.id,
+                            penyiarId: activeLog.penyiarId,
+                            penyiarName: activeLog.penyiarName,
+                            programName: activeLog.programName,
+                            date: activeLog.date,
+                            checkIn: activeLog.checkIn,
+                            startTime: sTime
+                        };
+                        localStorage.setItem('activeAttendance', JSON.stringify(currentActiveAttendance));
+                        startCountdownTimer();
+                    } else {
+                        currentActiveAttendance = null;
+                        localStorage.removeItem('activeAttendance');
+                        if (checkoutTimerInterval) clearInterval(checkoutTimerInterval);
+                    }
+                }
             }
             startClock();
             handleRouting();
@@ -691,6 +715,22 @@ let adminData = {
             };
             localStorage.setItem('activeAttendance', JSON.stringify(currentActiveAttendance));
 
+            const logEntry = {
+                id: currentActiveAttendance.id,
+                penyiarId: currentActiveAttendance.penyiarId,
+                penyiarName: currentActiveAttendance.penyiarName,
+                programName: currentActiveAttendance.programName,
+                date: currentActiveAttendance.date,
+                checkIn: currentActiveAttendance.checkIn,
+                checkOut: "-",
+                status: "Active"
+            };
+            supabase.from('attendance_logs').insert([logEntry]).then(({error}) => {
+                if (!error) {
+                    attendanceLogs.unshift(logEntry);
+                }
+            });
+
             addNotification("Absensi Berhasil", `Anda telah Check-In pada program ${progName}`, "attendance");
             showNotification(`Berhasil Check-In pada program ${progName}`);
             renderPenyiarAttendancePanel();
@@ -746,14 +786,23 @@ let adminData = {
                 status: statusLabel
             };
 
-            const { error } = await supabase.from('attendance_logs').insert([logEntry]);
+            const { error } = await supabase.from('attendance_logs')
+                .update({ checkOut: timeStr, status: statusLabel })
+                .eq('id', currentActiveAttendance.id);
+                
             if (error) {
                 console.error("Gagal menyimpan log absensi:", error);
                 showNotification("Gagal menyimpan absensi ke database!", "error");
                 return;
             }
 
-            attendanceLogs.unshift(logEntry);
+            const existingLog = attendanceLogs.find(l => l.id === currentActiveAttendance.id);
+            if (existingLog) {
+                existingLog.checkOut = timeStr;
+                existingLog.status = statusLabel;
+            } else {
+                attendanceLogs.unshift(logEntry);
+            }
 
             currentActiveAttendance = null;
             localStorage.removeItem('activeAttendance');
