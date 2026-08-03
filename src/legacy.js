@@ -135,6 +135,10 @@ let adminData = {
                 currentUser = JSON.parse(localStorage.getItem('currentUser'));
                 setupDashboardApp();
             }
+            if (localStorage.getItem('activeAttendance')) {
+                currentActiveAttendance = JSON.parse(localStorage.getItem('activeAttendance'));
+                startCountdownTimer();
+            }
             startClock();
             handleRouting();
         };
@@ -450,6 +454,7 @@ let adminData = {
         function logout() {
             currentUser = null;
             localStorage.removeItem('currentUser');
+            localStorage.removeItem('activeAttendance');
             if (checkoutTimerInterval) clearInterval(checkoutTimerInterval);
             window.location.hash = btoa('login');
             showNotification('Anda telah keluar dari akun');
@@ -684,6 +689,7 @@ let adminData = {
                 checkIn: timeStr,
                 startTime: Date.now()
             };
+            localStorage.setItem('activeAttendance', JSON.stringify(currentActiveAttendance));
 
             addNotification("Absensi Berhasil", `Anda telah Check-In pada program ${progName}`, "attendance");
             showNotification(`Berhasil Check-In pada program ${progName}`);
@@ -750,6 +756,7 @@ let adminData = {
             attendanceLogs.unshift(logEntry);
 
             currentActiveAttendance = null;
+            localStorage.removeItem('activeAttendance');
             if (checkoutTimerInterval) clearInterval(checkoutTimerInterval);
 
             showNotification('Proses Check-Out berhasil dicatat!');
